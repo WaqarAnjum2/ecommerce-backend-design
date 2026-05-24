@@ -3,6 +3,8 @@ import './config/env.js';
 
 import express from 'express';
 import serverless from 'serverless-http';
+import helmet from 'helmet';
+import cors from 'cors';
 
 // Import route modules
 import categoriesRouter from './routes/categories.js';
@@ -17,6 +19,24 @@ const app = express();
 // ── Middleware ──────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Security headers
+app.use(helmet());
+
+// CORS — allow origins via env `ALLOWED_ORIGINS` (comma-separated), default to allow all
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+const corsOptions = {};
+if (allowedOrigins.length > 0) {
+  corsOptions.origin = (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
+    return callback(new Error('CORS blocked by policy'), false);
+  };
+} else {
+  // no origins specified — allow all (useful for local/dev)
+  corsOptions.origin = true;
+}
+app.use(cors(corsOptions));
 
 // ── Routes ─────────────────────────────────────────────────────
 const publicRateLimit = rateLimit({ keyPrefix: 'ratelimit:public', windowSeconds: 60, max: 60 });
