@@ -7,6 +7,8 @@ import prisma from '../lib/prisma.js';
 const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const JWKS_CACHE_TTL_MS = 60 * 60 * 1000;
+const HS_ALGORITHMS = ['HS256', 'HS384', 'HS512'];
+const ASYMMETRIC_ALGORITHMS = ['RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'ES512', 'EdDSA'];
 let jwksCache = { keys: null, expiresAt: 0 };
 
 async function getJwksKeys() {
@@ -41,6 +43,34 @@ async function getPublicKeyForKid(kid) {
   return createPublicKey({ key: jwk, format: 'jwk' });
 }
 
+async function verifyWithSecret(token) {
+  if (!JWT_SECRET) {
+    return null;
+  }
+
+  try {
+    return jwt.verify(token, JWT_SECRET, { algorithms: HS_ALGORITHMS });
+  } catch (err) {
+    // Retry with base64-decoded secret when Supabase provides base64 values
+    try {
+      const secretBuffer = Buffer.from(JWT_SECRET, 'base64');
+      return jwt.verify(token, secretBuffer, { algorithms: HS_ALGORITHMS });
+    } catch (innerErr) {
+      return null;
+    }
+  }
+}
+
+async function verifyWithJwks(token) {
+  const header = jwt.decode(token, { complete: true })?.header;
+  if (!header?.kid) {
+    return null;
+  }
+
+  const publicKey = await getPublicKeyForKid(header.kid);
+  return jwt.verify(token, publicKey, { algorithms: ASYMMETRIC_ALGORITHMS });
+}
+
 /**
  * Middleware: verifyToken
  * Extracts and verifies Supabase JWT from Authorization header.
@@ -56,30 +86,14 @@ export async function verifyToken(req, res, next) {
   const token = authHeader.split(' ')[1];
 
   try {
-    const header = jwt.decode(token, { complete: true })?.header;
-    if (!header?.alg) {
-      return res.status(401).json({ error: 'Invalid token format' });
+    let decoded = await verifyWithSecret(token);
+
+    if (!decoded) {
+      decoded = await verifyWithJwks(token);
     }
 
-    let decoded;
-    if (header.alg.startsWith('HS')) {
-      if (!JWT_SECRET) {
-        return res.status(500).json({ error: 'JWT secret not configured' });
-      }
-
-      try {
-        // Try verifying with the raw secret string
-        decoded = jwt.verify(token, JWT_SECRET, { algorithms: [header.alg] });
-      } catch (verifyErr) {
-        // If that fails, try decoding the secret as base64 (common for Supabase JWT secrets)
-        const secretBuffer = Buffer.from(JWT_SECRET, 'base64');
-        decoded = jwt.verify(token, secretBuffer, { algorithms: [header.alg] });
-      }
-    } else if (header.alg.startsWith('RS') || header.alg.startsWith('ES')) {
-      const publicKey = await getPublicKeyForKid(header.kid);
-      decoded = jwt.verify(token, publicKey, { algorithms: [header.alg] });
-    } else {
-      return res.status(401).json({ error: 'Unsupported token algorithm' });
+    if (!decoded) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
     req.user = {
