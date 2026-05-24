@@ -15,6 +15,7 @@ import Cart from './components/Cart';
 import Profile from './components/Profile';
 import Messages from './components/Messages';
 import Orders from './components/Orders';
+import Favorites from './components/Favorites';
 import ShippingAddress from './components/ShippingAddress';
 import PaymentMethods from './components/PaymentMethods';
 import AuthModal from './components/AuthModal';
@@ -96,6 +97,8 @@ function App() {
         return <ProductDetails setPage={setCurrentPage} productId={selectedProductId} />;
       case 'cart':
         return <Cart setPage={setCurrentPage} onAuthRequired={() => setShowAuthModal(true)} />;
+      case 'favorites':
+        return <Favorites setPage={setCurrentPage} onProductClick={goToDetails} />;
       case 'profile':
         return <Profile setPage={setCurrentPage} onAuthRequired={() => setShowAuthModal(true)} />;
       case 'message':

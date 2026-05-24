@@ -30,12 +30,9 @@ const Header = ({ setPage, onAuthRequired, searchQuery, setSearchQuery }) => {
     }
   };
 
-  const handleOrdersClick = () => {
-    if (user) {
-      setPage('orders');
-    } else {
-      onAuthRequired();
-    }
+  const handleFavoritesClick = () => {
+    // favorites are stored locally; no auth required to view, but optionally require auth
+    setPage('favorites');
   };
 
   const toggleLangMenu = () => {
@@ -146,13 +143,13 @@ const Header = ({ setPage, onAuthRequired, searchQuery, setSearchQuery }) => {
             <span className="text-xs font-medium">Message</span>
           </div>
 
-          {/* Orders Action */}
+          {/* Favorites Action */}
           <div
-            onClick={handleOrdersClick}
+            onClick={handleFavoritesClick}
             className="flex flex-col items-center cursor-pointer text-[#8B96A5] hover:text-[#1A73E8] transition-colors"
           >
             <Heart className="w-5 h-5 mb-1" />
-            <span className="text-xs font-medium">Orders</span>
+            <span className="text-xs font-medium">Favorites</span>
           </div>
 
           {/* Cart Action */}
