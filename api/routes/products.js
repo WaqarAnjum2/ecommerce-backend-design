@@ -138,8 +138,18 @@ router.post('/', noCacheHeaders, verifyToken, requireAdmin, async (req, res) => 
       image, imageUrls, brand, rating, shipping, stock, features,
     } = req.body;
 
-    if (!title || price === undefined) {
-      return res.status(400).json({ error: 'title and price are required' });
+    // Basic validation
+    if (!title || String(title).trim() === '') {
+      return res.status(400).json({ error: 'title is required' });
+    }
+    if (price === undefined || isNaN(Number(price)) || Number(price) <= 0) {
+      return res.status(400).json({ error: 'price is required and must be a number greater than 0' });
+    }
+    if (stock !== undefined && (isNaN(Number(stock)) || Number(stock) < 0)) {
+      return res.status(400).json({ error: 'stock must be a non-negative integer' });
+    }
+    if (imageUrls !== undefined && !Array.isArray(imageUrls)) {
+      return res.status(400).json({ error: 'imageUrls must be an array of strings' });
     }
 
     // Set first image URL as primary thumbnail if not specified

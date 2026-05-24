@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+	--site-bg: #f5f7fb;
+	--site-border: #e3e8ee;
+}
+
+body {
+	font-family: 'Plus Jakarta Sans', 'Manrope', sans-serif;
+	background: var(--site-bg);
+	color: #1c1c1c;
+}
+
+.container {
+	width: min(100% - 2rem, 1180px);
+	margin-left: auto;
+	margin-right: auto;
+	padding-left: 1rem;
+	padding-right: 1rem;
+}
+
+.admin-portal {
+	--admin-ink: #0b1020;
+	--admin-muted: #5a6475;
+	--admin-surface: #ffffff;
+	--admin-surface-2: #f2f5ff;
+	--admin-accent: #5b7cff;
+	--admin-accent-2: #ff9b4a;
+	--admin-border: #e3e8f2;
+	font-family: 'Manrope', 'Segoe UI', sans-serif;
+	color: var(--admin-ink);
+	background: linear-gradient(135deg, #f7f8ff 0%, #fff6ee 55%, #f4f9ff 100%);
+}
+
+.admin-portal .admin-title {
+	font-family: 'Space Grotesk', 'Manrope', sans-serif;
+	letter-spacing: -0.02em;
+}
+
+.admin-portal .admin-glass {
+	background: rgba(255, 255, 255, 0.72);
+	backdrop-filter: blur(16px);
+}
+
+.admin-portal .admin-card {
+	background: var(--admin-surface);
+	border: 1px solid var(--admin-border);
+	box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+}
+
+.admin-portal .admin-fade-in {
+	animation: adminFade 0.6s ease-out both;
+}
+
+.admin-portal .admin-slide-up {
+	animation: adminSlide 0.5s ease-out both;
+}
+
+@keyframes adminFade {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes adminSlide {
+	from {
+		opacity: 0;
+		transform: translateY(16px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronRight, Grid, List, ChevronDown, Star, Heart, X } from 'lucide-react';
 import ProductCardCarousel from './ProductCardCarousel';
+import { getFavorites, toggleFavorite } from '../lib/favorites';
 
 const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }) => {
   const [viewMode, setViewMode] = useState('grid');
@@ -18,6 +19,7 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
   const [sortBy, setSortBy] = useState('');
   const [page, setPageNum] = useState(1);
   const [activeFilters, setActiveFilters] = useState([]);
+  const [favorites, setFavorites] = useState(() => getFavorites());
 
   const brandOptions = ["Samsung", "Apple", "Huawei", "Pocco", "Lenovo", "Canon", "GoPro"];
 
@@ -29,19 +31,35 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
       .catch(() => {});
   }, []);
 
+  const normalizeNumber = (value) => {
+    if (value === '' || value === null || value === undefined) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
   // Build query and fetch products
-  const fetchProducts = useCallback(() => {
+  const fetchProducts = useCallback((overridePage) => {
     setLoading(true);
     const params = new URLSearchParams();
-    params.set('page', String(page));
+    const currentPage = overridePage ?? page;
+    params.set('page', String(currentPage));
     params.set('limit', '10');
+
+    const ratingValues = selectedRatings.map((r) => Number(r)).filter(Number.isFinite);
+    const ratingFilter = ratingValues.length ? Math.min(...ratingValues) : null;
+
+    let parsedMin = normalizeNumber(minPrice);
+    let parsedMax = normalizeNumber(maxPrice);
+    if (parsedMin !== null && parsedMax !== null && parsedMin > parsedMax) {
+      [parsedMin, parsedMax] = [parsedMax, parsedMin];
+    }
 
     if (selectedCategory) params.set('category', selectedCategory);
     if (searchQuery) params.set('search', searchQuery);
     if (selectedBrands.length) params.set('brand', selectedBrands.join(','));
-    if (minPrice) params.set('minPrice', minPrice);
-    if (maxPrice) params.set('maxPrice', maxPrice);
-    if (selectedRatings.length) params.set('rating', String(Math.min(...selectedRatings)));
+    if (parsedMin !== null) params.set('minPrice', String(parsedMin));
+    if (parsedMax !== null) params.set('maxPrice', String(parsedMax));
+    if (ratingFilter !== null) params.set('rating', String(ratingFilter));
     if (sortBy) params.set('sort', sortBy);
 
     fetch(`/api/products?${params.toString()}`)
@@ -57,6 +75,12 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  useEffect(() => {
+    const handleStorage = () => setFavorites(getFavorites());
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   // Update active filter tags
   useEffect(() => {
@@ -108,8 +132,14 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
     setPageNum(1);
   };
 
+  const handleApplyPrice = () => {
+    const nextPage = 1;
+    setPageNum(nextPage);
+    fetchProducts(nextPage);
+  };
+
   return (
-    <div className="container py-4">
+    <div className="container py-6">
       {/* Breadcrumbs */}
       <div className="flex items-center gap-2 text-[#8B96A5] text-sm mb-6">
         <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => setPage('home')}>Home</span>
@@ -121,9 +151,9 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
 
       <div className="flex gap-6">
         {/* Sidebar Filters */}
-        <aside className="w-[240px] flex-shrink-0 space-y-2">
+        <aside className="w-[240px] flex-shrink-0 space-y-2 bg-white border border-[color:var(--site-border)] rounded-2xl p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
           {/* Category */}
-          <div className="border-t border-[#DEE2E7] py-3">
+          <div className="border-t border-[color:var(--site-border)] py-3">
             <h4 className="font-bold text-[#1C1C1C] mb-3 flex justify-between items-center cursor-pointer">
               Category <ChevronDown className="w-4 h-4 opacity-50" />
             </h4>
@@ -141,7 +171,7 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
           </div>
 
           {/* Brands */}
-          <div className="border-t border-[#DEE2E7] py-3">
+          <div className="border-t border-[color:var(--site-border)] py-3">
             <h4 className="font-bold text-[#1C1C1C] mb-3 flex justify-between items-center cursor-pointer">
               Brands <ChevronDown className="w-4 h-4 opacity-50" />
             </h4>
@@ -152,7 +182,7 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
                     type="checkbox"
                     checked={selectedBrands.includes(brand)}
                     onChange={() => toggleBrand(brand)}
-                    className="w-4 h-4 rounded border-[#DEE2E7] text-primary focus:ring-primary"
+                    className="w-4 h-4 rounded border-[color:var(--site-border)] text-[#1A73E8] focus:ring-[#1A73E8]"
                   />
                   <span className="group-hover:text-primary transition-colors">{brand}</span>
                 </label>
@@ -169,21 +199,21 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
               <div className="flex gap-2">
                 <div className="flex-1">
                   <p className="text-[#1C1C1C] text-xs mb-1">Min</p>
-                  <input type="number" placeholder="0" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} className="w-full border border-[#DEE2E7] rounded-md px-3 py-2 text-sm outline-none focus:border-primary" />
+                  <input type="number" placeholder="0" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} className="w-full border border-[color:var(--site-border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[#1A73E8]" />
                 </div>
                 <div className="flex-1">
                   <p className="text-[#1C1C1C] text-xs mb-1">Max</p>
-                  <input type="number" placeholder="999999" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className="w-full border border-[#DEE2E7] rounded-md px-3 py-2 text-sm outline-none focus:border-primary" />
+                  <input type="number" placeholder="999999" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className="w-full border border-[color:var(--site-border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[#1A73E8]" />
                 </div>
               </div>
-              <button onClick={() => { setPageNum(1); fetchProducts(); }} className="w-full bg-white border border-[#DEE2E7] text-primary py-2 rounded-md text-sm font-medium hover:bg-shade transition-colors shadow-sm">
+              <button onClick={handleApplyPrice} className="w-full bg-[#1A73E8] border border-[#1A73E8] text-white py-2 rounded-full text-sm font-medium hover:bg-[#1666D1] transition-colors shadow-sm">
                 Apply
               </button>
             </div>
           </div>
 
           {/* Ratings */}
-          <div className="border-t border-[#DEE2E7] py-3 pb-4">
+          <div className="border-t border-[color:var(--site-border)] py-3 pb-4">
             <h4 className="font-bold text-[#1C1C1C] mb-3 flex justify-between items-center cursor-pointer">
               Ratings <ChevronDown className="w-4 h-4 opacity-50" />
             </h4>
@@ -194,7 +224,7 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
                     type="checkbox"
                     checked={selectedRatings.includes(stars)}
                     onChange={() => toggleRating(stars)}
-                    className="w-4 h-4 rounded border-[#DEE2E7] text-primary focus:ring-primary"
+                    className="w-4 h-4 rounded border-[color:var(--site-border)] text-[#1A73E8] focus:ring-[#1A73E8]"
                   />
                   <div className="flex gap-0.5">
                     {Array(5).fill(0).map((_, i) => (
@@ -210,12 +240,12 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
         {/* Main Content Area */}
         <main className="flex-1">
           {/* Top Bar */}
-          <div className="bg-white border border-[#DEE2E7] rounded-lg p-4 flex items-center justify-between mb-4">
+          <div className="bg-white border border-[color:var(--site-border)] rounded-2xl p-4 flex items-center justify-between mb-4 shadow-sm">
             <span className="text-[#1C1C1C] text-sm">
               {pagination.total.toLocaleString()} items
             </span>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 border border-[#DEE2E7] rounded-md px-3 py-1 bg-white">
+              <div className="flex items-center gap-2 border border-[color:var(--site-border)] rounded-full px-3 py-1 bg-white">
                 <select
                   value={sortBy}
                   onChange={(e) => { setSortBy(e.target.value); setPageNum(1); }}
@@ -228,11 +258,11 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
                   <option value="orders_desc">Most Popular</option>
                 </select>
               </div>
-              <div className="flex border border-[#DEE2E7] rounded-md overflow-hidden">
-                <div className={`p-2 border-r border-[#DEE2E7] cursor-pointer transition-colors ${viewMode === 'grid' ? 'bg-[#EFF2F4]' : 'hover:bg-shade'}`} onClick={() => setViewMode('grid')}>
+              <div className="flex border border-[color:var(--site-border)] rounded-full overflow-hidden">
+                <div className={`p-2 border-r border-[color:var(--site-border)] cursor-pointer transition-colors ${viewMode === 'grid' ? 'bg-[#EFF2F4]' : 'hover:bg-[#F3F6FF]'}`} onClick={() => setViewMode('grid')}>
                   <Grid size={18} className="text-[#1C1C1C]" />
                 </div>
-                <div className={`p-2 cursor-pointer transition-colors ${viewMode === 'list' ? 'bg-[#EFF2F4]' : 'hover:bg-shade'}`} onClick={() => setViewMode('list')}>
+                <div className={`p-2 cursor-pointer transition-colors ${viewMode === 'list' ? 'bg-[#EFF2F4]' : 'hover:bg-[#F3F6FF]'}`} onClick={() => setViewMode('list')}>
                   <List size={18} className="text-[#1C1C1C]" />
                 </div>
               </div>
@@ -243,7 +273,7 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
           {activeFilters.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 mb-4">
               {activeFilters.map((filter, i) => (
-                <div key={i} className="flex items-center gap-2 px-3 py-1.5 border border-primary rounded-md bg-white text-dark text-sm">
+                <div key={i} className="flex items-center gap-2 px-3 py-1.5 border border-[color:var(--site-border)] rounded-full bg-white text-dark text-sm">
                   <span>{filter}</span>
                   <X size={14} className="text-[#8B96A5] cursor-pointer hover:text-dark" onClick={() => removeFilter(filter)} />
                 </div>
@@ -267,13 +297,28 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
           ) : viewMode === 'list' ? (
             /* Product List View */
             <div className="space-y-3">
-              {products.map((product) => (
+              {products.map((product) => {
+                const isFav = favorites.some((item) => item.id === product.id);
+                return (
                 <div key={product.id} className="bg-white border border-[#DEE2E7] rounded-lg p-5 flex gap-6 hover:shadow-md transition-shadow group cursor-pointer relative" onClick={() => onProductClick(product.id)}>
                   <div className="w-[210px] h-[210px] lg:w-[240px] lg:h-[240px] flex-shrink-0 flex items-center justify-center bg-[#F7F7F7] rounded-lg p-6 relative overflow-hidden">
                     <ProductCardCarousel images={product.imageUrls?.length > 0 ? product.imageUrls : [product.image]} title={product.title} />
                   </div>
-                  <button className="absolute right-5 top-5 w-10 h-10 border border-[#DEE2E7] rounded-md flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all shadow-sm" onClick={(e) => e.stopPropagation()}>
-                    <Heart size={20} />
+                  <button
+                    className={`absolute right-5 top-5 w-10 h-10 border rounded-md flex items-center justify-center transition-all shadow-sm ${
+                      isFav
+                        ? 'bg-[#1A73E8] text-white border-[#1A73E8]'
+                        : 'border-[#DEE2E7] text-[#1A73E8] hover:bg-[#1A73E8] hover:text-white'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const next = toggleFavorite(product);
+                      setFavorites(next);
+                    }}
+                    aria-pressed={isFav}
+                    title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    <Heart size={20} className={isFav ? 'fill-current' : ''} />
                   </button>
                   <div className="flex-1 py-1">
                     <h3 className="text-[#1C1C1C] text-base font-semibold group-hover:text-primary transition-colors mb-3">{product.title}</h3>
@@ -297,12 +342,15 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
                     <button className="text-primary font-bold text-sm bg-transparent border-none p-0 hover:underline">View details</button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             /* Product Grid View */
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {products.map((product) => (
+              {products.map((product) => {
+                const isFav = favorites.some((item) => item.id === product.id);
+                return (
                 <div key={product.id} className="bg-white border border-[#DEE2E7] rounded-lg p-4 hover:shadow-[0px_8px_25px_rgba(0,0,0,0.1)] hover:-translate-y-1 transition-all duration-300 group flex flex-col items-center cursor-pointer" onClick={() => onProductClick(product.id)}>
                   <div className="w-full aspect-square flex items-center justify-center mb-4 bg-[#F7F7F7] rounded-md p-6 overflow-hidden">
                     <ProductCardCarousel images={product.imageUrls?.length > 0 ? product.imageUrls : [product.image]} title={product.title} />
@@ -312,8 +360,21 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                           <span className="text-lg font-bold text-[#1C1C1C]">${product.price}</span>
-                          <button className="w-8 h-8 border border-[#DEE2E7] rounded-md flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all shadow-sm" onClick={(e) => e.stopPropagation()}>
-                            <Heart size={16} />
+                          <button
+                            className={`w-8 h-8 border rounded-md flex items-center justify-center transition-all shadow-sm ${
+                              isFav
+                                ? 'bg-[#1A73E8] text-white border-[#1A73E8]'
+                                : 'border-[#DEE2E7] text-[#1A73E8] hover:bg-[#1A73E8] hover:text-white'
+                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const next = toggleFavorite(product);
+                              setFavorites(next);
+                            }}
+                            aria-pressed={isFav}
+                            title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                          >
+                            <Heart size={16} className={isFav ? 'fill-current' : ''} />
                           </button>
                         </div>
                         {product.oldPrice && <span className="text-[#8B96A5] line-through text-xs">${product.oldPrice}</span>}
@@ -330,7 +391,8 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
                     <h3 className="text-[#505050] text-[13px] leading-[1.4] line-clamp-2 hover:text-primary transition-colors">{product.title}</h3>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

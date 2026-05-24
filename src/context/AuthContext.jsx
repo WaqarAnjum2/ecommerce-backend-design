@@ -68,22 +68,55 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signUp = async (email, password, fullName) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-      },
-    });
-    return { data, error };
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, fullName }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        return { data: null, error: { message: data.error || 'Failed to register.' } };
+      }
+
+      if (data?.access_token && data?.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        });
+      }
+
+      return { data, error: null };
+    } catch (err) {
+      return { data: null, error: { message: err.message || 'Failed to register.' } };
+    }
   };
 
   const signIn = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { data, error };
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        return { data: null, error: { message: data.error || 'Failed to log in.' } };
+      }
+
+      if (data?.access_token && data?.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        });
+      }
+
+      return { data, error: null };
+    } catch (err) {
+      return { data: null, error: { message: err.message || 'Failed to log in.' } };
+    }
   };
 
   const signOut = async () => {

@@ -51,6 +51,7 @@ function App() {
       .then((r) => r.json())
       .then((data) => {
         const items = (data.products || []).map((p) => ({
+          id: p.id,
           name: p.title,
           price: String(p.price),
           image: p.image || '',
@@ -64,6 +65,7 @@ function App() {
       .then((r) => r.json())
       .then((data) => {
         const items = (data.products || []).map((p) => ({
+          id: p.id,
           name: p.title,
           price: String(p.price),
           image: p.image || '',
@@ -111,15 +113,9 @@ function App() {
               setPage={setCurrentPage}
               onAuthRequired={() => setShowAuthModal(true)}
               onCategoryClick={(cat) => {
-                if (cat === "Home interiors") {
-                  setSearchQuery("home");
-                } else if (cat === "Computer and tech" || cat === "electronics") {
-                  setSearchQuery("electronics");
-                } else if (cat === "Sports and outdoor") {
-                  setSearchQuery("outdoor");
-                } else {
-                  setSearchQuery(cat);
-                }
+                const categoryName = typeof cat === 'string' ? cat : cat?.name;
+                if (!categoryName) return;
+                setSearchQuery(categoryName);
                 setCurrentPage('listing');
               }}
             />
@@ -131,6 +127,9 @@ function App() {
               bannerImg={homeBanner}
               items={homeItems}
               setPage={setCurrentPage}
+              onProductClick={goToDetails}
+              categorySlug="home-outdoor"
+              setSearchQuery={setSearchQuery}
             />
 
             <CategorySection
@@ -139,6 +138,9 @@ function App() {
               bannerImg={electronicsBanner}
               items={electronicsItems}
               setPage={setCurrentPage}
+              onProductClick={goToDetails}
+              categorySlug="electronics"
+              setSearchQuery={setSearchQuery}
             />
 
             <InquiryForm />
@@ -155,7 +157,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-[color:var(--site-bg)] font-jakarta">
       <Header
         setPage={setCurrentPage}
         onAuthRequired={() => setShowAuthModal(true)}

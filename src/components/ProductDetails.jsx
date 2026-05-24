@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Heart, MessageSquare, ShoppingBag, ShieldCheck, Globe, ChevronRight, Check } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { isFavorite as isFavoriteProduct, toggleFavorite } from '../lib/favorites';
 
 const ProductDetails = ({ setPage, productId }) => {
   const [product, setProduct] = useState(null);
@@ -8,6 +9,7 @@ const ProductDetails = ({ setPage, productId }) => {
   const [selectedThumb, setSelectedThumb] = useState(0);
   const { addItem } = useCart();
   const [addedToCart, setAddedToCart] = useState(false);
+  const [favorite, setFavorite] = useState(false);
 
   useEffect(() => {
     if (!productId) {
@@ -20,6 +22,7 @@ const ProductDetails = ({ setPage, productId }) => {
       .then((data) => {
         if (data.error) throw new Error(data.error);
         setProduct(data);
+        setFavorite(isFavoriteProduct(data.id));
       })
       .catch((err) => console.error('Failed to load product:', err))
       .finally(() => setLoading(false));
@@ -30,6 +33,12 @@ const ProductDetails = ({ setPage, productId }) => {
     addItem(product);
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
+  };
+
+  const handleToggleFavorite = () => {
+    if (!product) return;
+    toggleFavorite(product);
+    setFavorite(isFavoriteProduct(product.id));
   };
 
   if (loading) {
@@ -68,7 +77,7 @@ const ProductDetails = ({ setPage, productId }) => {
       </div>
 
       {/* Main Content Card */}
-      <div className="bg-white border border-[#DEE2E7] rounded-lg p-5 lg:p-8 flex flex-col lg:flex-row gap-8 mb-8 shadow-sm">
+      <div className="bg-white border border-[color:var(--site-border)] rounded-2xl p-5 lg:p-8 flex flex-col lg:flex-row gap-8 mb-8 shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
         {/* Gallery Section */}
         <div className="lg:w-[450px] flex-shrink-0">
           {(() => {
@@ -76,7 +85,7 @@ const ProductDetails = ({ setPage, productId }) => {
             const currentImage = images[selectedThumb] || product.image;
             return (
               <>
-                <div className="border border-[#DEE2E7] rounded-lg p-8 mb-4 flex items-center justify-center bg-[#F7F7F7] aspect-square overflow-hidden group">
+                <div className="border border-[color:var(--site-border)] rounded-2xl p-8 mb-4 flex items-center justify-center bg-[#F7F7F7] aspect-square overflow-hidden group">
                   {currentImage && (
                     <img
                       src={currentImage}
@@ -91,10 +100,10 @@ const ProductDetails = ({ setPage, productId }) => {
                       <button
                         key={i}
                         onClick={() => setSelectedThumb(i)}
-                        className={`w-14 h-14 border rounded-md p-1 bg-white flex items-center justify-center flex-shrink-0 transition-all ${
+                        className={`w-14 h-14 border rounded-xl p-1 bg-white flex items-center justify-center flex-shrink-0 transition-all ${
                           selectedThumb === i
                             ? 'border-primary ring-1 ring-primary'
-                            : 'border-[#DEE2E7] hover:border-[#8B96A5]'
+                            : 'border-[color:var(--site-border)] hover:border-[#8B96A5]'
                         }`}
                       >
                         <img
@@ -140,7 +149,7 @@ const ProductDetails = ({ setPage, productId }) => {
           </div>
 
           {/* Pricing Block */}
-          <div className="bg-[#FFF0DF] p-4 rounded-lg flex flex-wrap gap-8 items-center mb-6">
+          <div className="bg-[#FFF0DF] p-4 rounded-2xl flex flex-wrap gap-8 items-center mb-6">
             <div className="flex flex-col">
               <span className="text-xl lg:text-3xl font-bold text-[#FA3434]">${product.price}</span>
               {product.oldPrice && <span className="text-[#8B96A5] line-through text-sm">${product.oldPrice}</span>}
@@ -161,14 +170,14 @@ const ProductDetails = ({ setPage, productId }) => {
             </div>
           </div>
 
-          <div className="h-[1px] bg-[#DEE2E7] mb-8"></div>
+          <div className="h-[1px] bg-[color:var(--site-border)] mb-8"></div>
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-4">
             <button
-              className={`flex-1 min-w-[150px] py-3 rounded-lg font-bold transition-colors ${
+              className={`flex-1 min-w-[150px] py-3 rounded-full font-bold transition-colors ${
                 isInStock
-                  ? 'bg-primary hover:bg-primary-dark text-white'
+                  ? 'bg-[#1A73E8] hover:bg-[#1666D1] text-white'
                   : 'bg-[#DEE2E7] text-[#8B96A5] cursor-not-allowed'
               }`}
               onClick={() => { if (isInStock) { handleAddToCart(); setPage('cart'); } }}
@@ -177,33 +186,42 @@ const ProductDetails = ({ setPage, productId }) => {
               {isInStock ? 'Buy Now' : 'Out of Stock'}
             </button>
             <button
-              className={`flex-1 min-w-[150px] py-3 rounded-lg font-bold transition-colors ${
+              className={`flex-1 min-w-[150px] py-3 rounded-full font-bold transition-colors ${
                 addedToCart
                   ? 'bg-[#00B517] text-white'
-                  : 'bg-[#E3F0FF] hover:bg-[#D1E9FF] text-primary'
+                  : 'bg-[#EAF2FF] hover:bg-[#D7E7FF] text-[#1A73E8]'
               }`}
               onClick={handleAddToCart}
               disabled={!isInStock}
             >
               {addedToCart ? '✓ Added!' : 'Add to Cart'}
             </button>
-            <button className="w-12 h-12 flex items-center justify-center border border-[#DEE2E7] rounded-lg text-primary hover:bg-shade transition-colors">
-              <Heart size={20} />
+            <button
+              className={`w-12 h-12 flex items-center justify-center border rounded-full transition-colors ${
+                favorite
+                  ? 'bg-[#1A73E8] text-white border-[#1A73E8]'
+                  : 'border-[color:var(--site-border)] text-[#1A73E8] hover:bg-[#F3F6FF]'
+              }`}
+              onClick={handleToggleFavorite}
+              aria-pressed={favorite}
+              title={favorite ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Heart size={20} className={favorite ? 'fill-current' : ''} />
             </button>
           </div>
         </div>
 
         {/* Sidebar / Seller Info */}
         <div className="lg:w-[280px] space-y-4">
-          <div className="bg-white border border-[#DEE2E7] rounded-lg p-5">
+          <div className="bg-white border border-[color:var(--site-border)] rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-md bg-[#E3F0FF] flex items-center justify-center text-primary font-bold text-xl uppercase">R</div>
+              <div className="w-12 h-12 rounded-xl bg-[#EAF2FF] flex items-center justify-center text-[#1A73E8] font-bold text-xl uppercase">R</div>
               <div className="flex flex-col">
                 <span className="text-[#1C1C1C] font-normal">Supplier</span>
                 <span className="text-[#505050] text-sm">Guanjhou Trading Co.</span>
               </div>
             </div>
-            <div className="h-[1px] bg-[#DEE2E7] mb-4"></div>
+            <div className="h-[1px] bg-[color:var(--site-border)] mb-4"></div>
             <div className="space-y-3 mb-5">
               <div className="flex items-center gap-3 text-sm text-[#8B96A5]">
                 <ShieldCheck size={18} />
@@ -214,14 +232,14 @@ const ProductDetails = ({ setPage, productId }) => {
                 <span>Worldwide shipping</span>
               </div>
             </div>
-            <button className="w-full bg-primary text-white py-2 rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">Send inquiry</button>
+            <button className="w-full bg-[#1A73E8] text-white py-2 rounded-full text-sm font-medium hover:bg-[#1666D1] transition-colors">Send inquiry</button>
           </div>
         </div>
       </div>
 
       {/* Description Tabs */}
-      <div className="bg-white border border-[#DEE2E7] rounded-lg overflow-hidden mb-8">
-        <div className="flex border-b border-[#DEE2E7] bg-white overflow-x-auto no-scrollbar">
+      <div className="bg-white border border-[color:var(--site-border)] rounded-2xl overflow-hidden mb-8 shadow-sm">
+        <div className="flex border-b border-[color:var(--site-border)] bg-white overflow-x-auto no-scrollbar">
           {['Description', 'Reviews', 'Shipping'].map((tab, i) => (
             <button key={tab} className={`px-6 py-4 text-sm font-medium transition-colors border-b-2 ${i === 0 ? 'text-primary border-primary' : 'text-[#8B96A5] border-transparent hover:text-primary'}`}>
               {tab}

@@ -5,23 +5,24 @@ import { verifyToken } from '../middleware/auth.js';
 const router = Router();
 router.use(verifyToken);
 
+
 // GET /api/profiles/me — Fetch profile of the logged-in user
 router.get('/me', async (req, res) => {
   try {
+    const email = req.user.email || '';
+
     let profile = await prisma.profile.findUnique({
       where: { id: req.user.id },
     });
     
     // Auto-create profile if missing (defensive fallback for existing auth users)
     if (!profile) {
-      const email = req.user.email || '';
-      const isAdmin = email === 'forlaptop71r172@gmail.com';
       profile = await prisma.profile.create({
         data: {
           id: req.user.id,
           email: email,
           fullName: email ? email.split('@')[0] : 'User',
-          isAdmin: isAdmin,
+          isAdmin: false,
         },
       });
     }

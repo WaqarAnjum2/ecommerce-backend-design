@@ -9,6 +9,8 @@ import categoriesRouter from './routes/categories.js';
 import productsRouter from './routes/products.js';
 import ordersRouter from './routes/orders.js';
 import profilesRouter from './routes/profiles.js';
+import authRouter from './routes/auth.js';
+import { rateLimit } from './middleware/rateLimit.js';
 
 const app = express();
 
@@ -17,13 +19,16 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // ── Routes ─────────────────────────────────────────────────────
-app.use('/api/categories', categoriesRouter);
-app.use('/api/products', productsRouter);
+const publicRateLimit = rateLimit({ keyPrefix: 'ratelimit:public', windowSeconds: 60, max: 60 });
+
+app.use('/api/categories', publicRateLimit, categoriesRouter);
+app.use('/api/products', publicRateLimit, productsRouter);
+app.use('/api/auth', publicRateLimit, authRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/profiles', profilesRouter);
 
 // ── Health check ───────────────────────────────────────────────
-app.get('/api/health', (req, res) => {
+app.get('/api/health', publicRateLimit, (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
