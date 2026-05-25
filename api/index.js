@@ -16,6 +16,7 @@ import inquiriesRouter from './routes/inquiries.js';
 import { rateLimit } from './middleware/rateLimit.js';
 
 const app = express();
+const apiRouter = express.Router();
 
 // ── Middleware ──────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
@@ -56,15 +57,15 @@ app.use(cors(corsOptions));
 // ── Routes ─────────────────────────────────────────────────────
 const publicRateLimit = rateLimit({ keyPrefix: 'ratelimit:public', windowSeconds: 60, max: 60 });
 
-app.use('/api/categories', publicRateLimit, categoriesRouter);
-app.use('/api/products', publicRateLimit, productsRouter);
-app.use('/api/auth', publicRateLimit, authRouter);
-app.use('/api/inquiries', publicRateLimit, inquiriesRouter);
-app.use('/api/orders', ordersRouter);
-app.use('/api/profiles', profilesRouter);
+apiRouter.use('/categories', publicRateLimit, categoriesRouter);
+apiRouter.use('/products', publicRateLimit, productsRouter);
+apiRouter.use('/auth', publicRateLimit, authRouter);
+apiRouter.use('/inquiries', publicRateLimit, inquiriesRouter);
+apiRouter.use('/orders', ordersRouter);
+apiRouter.use('/profiles', profilesRouter);
 
 // ── Health check ───────────────────────────────────────────────
-app.get('/api/health', publicRateLimit, (req, res) => {
+apiRouter.get('/health', publicRateLimit, (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -97,10 +98,14 @@ app.get('/__routes', (req, res) => {
   }
 });
 
-// ── 404 handler ────────────────────────────────────────────────
-app.use('/api/*splat', (req, res) => {
+// ── API 404 handler ────────────────────────────────────────────
+apiRouter.use('*', (req, res) => {
   res.status(404).json({ error: 'API route not found' });
 });
+
+// Mount API router for environments that preserve or strip /api
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
 
 // ── Global error handler ───────────────────────────────────────
 app.use((err, req, res, next) => {
