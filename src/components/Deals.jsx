@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import placeholderImage from '../assets/placeholder.svg';
 
 const Deals = ({ setPage, onProductClick }) => {
   const [deals, setDeals] = useState([]);
@@ -56,7 +57,7 @@ const Deals = ({ setPage, onProductClick }) => {
               >
                 <div className="w-full aspect-square bg-[#F7F7F7] rounded-md flex items-center justify-center mb-4 overflow-hidden p-2">
                   <img
-                    src={product.image || 'https://via.placeholder.com/150'}
+                    src={product.image || placeholderImage}
                     alt={product.title}
                     className="max-w-[90%] max-h-[90%] object-contain group-hover:scale-110 transition-transform duration-300"
                   />

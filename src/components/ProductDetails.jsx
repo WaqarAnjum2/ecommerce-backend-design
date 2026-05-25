@@ -232,7 +232,12 @@ const ProductDetails = ({ setPage, productId }) => {
                 <span>Worldwide shipping</span>
               </div>
             </div>
-            <button className="w-full bg-[#1A73E8] text-white py-2 rounded-full text-sm font-medium hover:bg-[#1666D1] transition-colors">Send inquiry</button>
+            <button
+              className="w-full bg-[#1A73E8] text-white py-2 rounded-full text-sm font-medium hover:bg-[#1666D1] transition-colors"
+              onClick={() => setPage && setPage('home')}
+            >
+              Send inquiry
+            </button>
           </div>
         </div>
       </div>

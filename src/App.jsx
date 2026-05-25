@@ -16,6 +16,7 @@ import Profile from './components/Profile';
 import Messages from './components/Messages';
 import Orders from './components/Orders';
 import Favorites from './components/Favorites';
+import MyInquiries from './components/MyInquiries';
 import ShippingAddress from './components/ShippingAddress';
 import PaymentMethods from './components/PaymentMethods';
 import AuthModal from './components/AuthModal';
@@ -101,6 +102,8 @@ function App() {
         return <Favorites setPage={setCurrentPage} onProductClick={goToDetails} />;
       case 'profile':
         return <Profile setPage={setCurrentPage} onAuthRequired={() => setShowAuthModal(true)} />;
+      case 'my-inquiries':
+        return <MyInquiries setPage={setCurrentPage} />;
       case 'message':
         return <Messages setPage={setCurrentPage} />;
       case 'orders':

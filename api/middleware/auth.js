@@ -128,3 +128,36 @@ export async function requireAdmin(req, res, next) {
     return res.status(500).json({ error: 'Failed to verify admin status' });
   }
 }
+
+/**
+ * Middleware: optionalVerifyToken
+ * If Authorization header present, verifies token and attaches req.user.
+ * If missing or invalid, does not fail the request but leaves req.user undefined.
+ */
+export async function optionalVerifyToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    req.user = null;
+    return next();
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    let decoded = await verifyWithSecret(token);
+    if (!decoded) decoded = await verifyWithJwks(token);
+    if (!decoded) {
+      req.user = null;
+      return next();
+    }
+
+    req.user = {
+      id: decoded.sub,
+      email: decoded.email,
+    };
+    return next();
+  } catch (err) {
+    console.warn('optionalVerifyToken: token invalid', err.message);
+    req.user = null;
+    return next();
+  }
+}

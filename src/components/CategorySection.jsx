@@ -1,4 +1,5 @@
 import React from 'react';
+import placeholderImage from '../assets/placeholder.svg';
 
 const CategorySection = ({ title, bannerImg, items, bannerBg, setPage, onProductClick, categorySlug, setSearchQuery }) => {
   const handleBannerClick = () => {
@@ -46,7 +47,7 @@ const CategorySection = ({ title, bannerImg, items, bannerBg, setPage, onProduct
             </div>
             <div className="w-[82px] h-[82px] shrink-0 self-end -mr-1 -mb-1">
               <img 
-                src={item.image || 'https://via.placeholder.com/150'} 
+                src={item.image || placeholderImage} 
                 alt={item.name} 
                 className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300" 
               />

@@ -42,6 +42,7 @@ const AdminPortal = ({ setPage }) => {
   const [historyOrders, setHistoryOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Pagination and search for products tab
@@ -225,7 +226,94 @@ const AdminPortal = ({ setPage }) => {
     if (activeTab === 'order-history' || activeTab === 'dashboard') {
       fetchOrderHistory();
     }
+    if (activeTab === 'inquiries' || activeTab === 'dashboard') {
+      fetchInquiries();
+    }
   }, [activeTab, prodPage, prodSearch]);
+
+  // Fetch inquiries (admin)
+  const fetchInquiries = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/inquiries', {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setInquiries(Array.isArray(data) ? data : []);
+      } else {
+        setInquiries([]);
+      }
+    } catch (err) {
+      console.error(err);
+      setInquiries([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteInquiry = (id) => {
+    openConfirm({
+      title: 'Delete inquiry',
+      message: 'Are you sure you want to delete this inquiry? This cannot be undone.',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          const resp = await fetch(`/api/inquiries/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+          });
+          if (resp.ok) {
+            openInfo({ title: 'Deleted', message: 'Inquiry deleted.', type: 'success' });
+            fetchInquiries();
+          } else {
+            const d = await resp.json();
+            openInfo({ title: 'Delete failed', message: d.error || 'Failed to delete.', type: 'error' });
+          }
+        } catch (err) {
+          console.error(err);
+          openInfo({ title: 'Delete failed', message: 'Failed to delete inquiry.', type: 'error' });
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+  };
+
+  // Update inquiry status (admin)
+  const handleUpdateInquiryStatus = (id, newStatus) => {
+    openConfirm({
+      title: 'Update inquiry status',
+      message: `Set inquiry ${id.substring(0, 8)}... to ${newStatus}?`,
+      confirmText: 'Update',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          const resp = await fetch(`/api/inquiries/${id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${getToken()}`
+            },
+            body: JSON.stringify({ status: newStatus })
+          });
+          if (resp.ok) {
+            openInfo({ title: 'Updated', message: 'Inquiry status updated.', type: 'success' });
+            fetchInquiries();
+          } else {
+            const d = await resp.json();
+            openInfo({ title: 'Update failed', message: d.error || 'Failed to update.', type: 'error' });
+          }
+        } catch (err) {
+          console.error(err);
+          openInfo({ title: 'Update failed', message: 'Failed to update inquiry status.', type: 'error' });
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+  };
 
   // Update order status
   const handleUpdateOrderStatus = (orderId, newStatus) => {
@@ -700,6 +788,13 @@ const AdminPortal = ({ setPage }) => {
             <Layers size={18} />
             <span>Manage Orders</span>
           </button>
+          <button
+            onClick={() => { setActiveTab('inquiries'); setSidebarOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === 'inquiries' ? 'bg-[color:var(--admin-accent)] text-white shadow-[0_12px_26px_rgba(91,124,255,0.35)]' : 'text-[color:var(--admin-muted)] hover:bg-[color:var(--admin-surface-2)] hover:text-[color:var(--admin-ink)]'}`}
+          >
+            <FileText size={18} />
+            <span>Inquiries</span>
+          </button>
 
           <button
             onClick={() => { setActiveTab('order-history'); setSidebarOpen(false); }}
@@ -1033,6 +1128,72 @@ const AdminPortal = ({ setPage }) => {
                               <CheckCircle size={12} />
                               {hist.status}
                             </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'inquiries' && (
+            <div className="admin-card admin-fade-in rounded-2xl overflow-hidden">
+              <div className="p-4 border-b border-[color:var(--admin-border)] bg-white/70 flex items-center justify-between">
+                <span className="text-sm font-semibold text-[color:var(--admin-ink)]">{inquiries.length} Inquiries</span>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => fetchInquiries()} className="text-sm px-3 py-2 rounded-xl border bg-white">Refresh</button>
+                </div>
+              </div>
+
+              {inquiries.length === 0 ? (
+                <div className="p-12 text-center text-[color:var(--admin-muted)]">
+                  <FileText size={48} className="mx-auto text-gray-300 mb-3" />
+                  <p className="text-lg font-medium text-[color:var(--admin-ink)]">No inquiries found</p>
+                  <p className="text-sm mt-1">When users submit inquiries they will appear here.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-white/70 text-[color:var(--admin-muted)] uppercase font-semibold text-xs border-b border-[color:var(--admin-border)]">
+                        <th className="px-6 py-4">ID</th>
+                        <th className="px-6 py-4">Subject</th>
+                        <th className="px-6 py-4">Quantity</th>
+                        <th className="px-6 py-4">Date</th>
+                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4 text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[color:var(--admin-border)] text-[color:var(--admin-muted)]">
+                      {inquiries.map((iq) => (
+                        <tr key={iq.id} className="hover:bg-[#f7f9ff]">
+                          <td className="px-6 py-4 font-mono text-xs text-[color:var(--admin-ink)]">{iq.id.substring(0, 8)}...</td>
+                          <td className="px-6 py-4 font-semibold text-[color:var(--admin-ink)]">{iq.subject}</td>
+                          <td className="px-6 py-4">{iq.quantity || '-'}</td>
+                          <td className="px-6 py-4 text-xs">{new Date(iq.createdAt).toLocaleString()}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={iq.status || 'new'}
+                                onChange={(e) => handleUpdateInquiryStatus(iq.id, e.target.value)}
+                                className="text-sm px-2 py-1 border rounded"
+                              >
+                                <option value="new">New</option>
+                                <option value="open">Open</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="closed">Closed</option>
+                              </select>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center justify-center gap-2">
+                              <button onClick={() => openModal({ title: 'Inquiry details', message: iq.details, type: 'info' })} className="px-3 py-1 rounded border">View</button>
+                              <button onClick={() => { navigator.clipboard?.writeText(`${iq.subject}\n\n${iq.details}`); openInfo({ title: 'Copied', message: 'Inquiry copied to clipboard.', type: 'success' }); }} className="px-3 py-1 rounded border">Copy</button>
+                              <button onClick={() => handleDeleteInquiry(iq.id)} className="px-3 py-1 rounded border text-red-600">Delete</button>
+                            </div>
                           </td>
                         </tr>
                       ))}

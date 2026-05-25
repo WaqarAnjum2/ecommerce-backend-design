@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import placeholderImage from '../assets/placeholder.svg';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 
@@ -123,7 +124,7 @@ const Orders = ({ setPage, onAuthRequired }) => {
                       <div key={item.id} className="p-6 flex gap-6 items-center">
                         <div className="w-20 h-20 bg-[#F7F7F7] border border-[#DEE2E7] rounded p-2 flex items-center justify-center shrink-0">
                           <img
-                            src={item.product?.image || 'https://via.placeholder.com/150'}
+                            src={item.product?.image || placeholderImage}
                             alt={item.product?.title || 'Product'}
                             className="max-w-full max-h-full object-contain"
                           />

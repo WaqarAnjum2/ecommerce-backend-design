@@ -12,6 +12,7 @@ const Header = ({ setPage, onAuthRequired, searchQuery, setSearchQuery }) => {
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [isShipOpen, setIsShipOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
   const langRef = useRef(null);
   const shipRef = useRef(null);
   const helpRef = useRef(null);
@@ -59,6 +60,14 @@ const Header = ({ setPage, onAuthRequired, searchQuery, setSearchQuery }) => {
   };
 
   useEffect(() => {
+    // load categories for the category select
+    fetch('/api/categories')
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setCategories(data);
+      })
+      .catch(() => {});
+
     const handleClickOutside = (event) => {
       const target = event.target;
       if (isLangOpen && langRef.current && !langRef.current.contains(target)) {
@@ -97,16 +106,23 @@ const Header = ({ setPage, onAuthRequired, searchQuery, setSearchQuery }) => {
             className="flex-grow px-4 py-2.5 outline-none text-sm text-dark placeholder-gray-400"
           />
           <div className="relative border-l border-shade-border h-full hidden md:flex items-center bg-white px-2">
-            <select className="appearance-none bg-transparent pl-3 pr-8 py-2 outline-none text-sm text-dark cursor-pointer font-normal">
-              <option>All category</option>
-              <option>Automobiles</option>
-              <option>Clothes and wear</option>
-              <option>Home interiors</option>
-              <option>Computer and tech</option>
-              <option>Tools, equipments</option>
-              <option>Sports and outdoor</option>
-              <option>Animal and pets</option>
-              <option>Machinery tools</option>
+            <select
+              className="appearance-none bg-transparent pl-3 pr-8 py-2 outline-none text-sm text-dark cursor-pointer font-normal"
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val) return;
+                setSearchQuery(val);
+                setSearchInput(val);
+                setPage('listing');
+              }}
+              defaultValue=""
+            >
+              <option value="">All category</option>
+              {categories.map((cat) => (
+                <option key={cat.id || cat.slug || cat.name} value={cat.slug || cat.name}>
+                  {cat.name}
+                </option>
+              ))}
             </select>
             <ChevronDown className="w-4 h-4 text-secondary absolute right-3 pointer-events-none" />
           </div>
@@ -141,6 +157,15 @@ const Header = ({ setPage, onAuthRequired, searchQuery, setSearchQuery }) => {
           >
             <MessageSquare className="w-5 h-5 mb-1" />
             <span className="text-xs font-medium">Message</span>
+          </div>
+
+          {/* My inquiries */}
+          <div
+            onClick={() => setPage('my-inquiries')}
+            className="flex flex-col items-center cursor-pointer text-[#8B96A5] hover:text-[#1A73E8] transition-colors"
+          >
+            <MessageSquare className="w-5 h-5 mb-1" />
+            <span className="text-xs font-medium">My inquiries</span>
           </div>
 
           {/* Favorites Action */}

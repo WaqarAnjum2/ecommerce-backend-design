@@ -12,6 +12,7 @@ import productsRouter from './routes/products.js';
 import ordersRouter from './routes/orders.js';
 import profilesRouter from './routes/profiles.js';
 import authRouter from './routes/auth.js';
+import inquiriesRouter from './routes/inquiries.js';
 import { rateLimit } from './middleware/rateLimit.js';
 
 const app = express();
@@ -19,6 +20,16 @@ const app = express();
 // ── Middleware ──────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// ── Diagnostic request logger (temporary) ───────────────────────
+app.use((req, res, next) => {
+  try {
+    console.log('[api] %s %s', req.method, req.originalUrl);
+  } catch (e) {
+    // ignore
+  }
+  next();
+});
 
 // Security headers
 app.use(helmet());
@@ -44,6 +55,7 @@ const publicRateLimit = rateLimit({ keyPrefix: 'ratelimit:public', windowSeconds
 app.use('/api/categories', publicRateLimit, categoriesRouter);
 app.use('/api/products', publicRateLimit, productsRouter);
 app.use('/api/auth', publicRateLimit, authRouter);
+app.use('/api/inquiries', publicRateLimit, inquiriesRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/profiles', profilesRouter);
 
@@ -54,6 +66,31 @@ app.get('/api/health', publicRateLimit, (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
   });
+});
+
+// ── Diagnostics: list mounted routes (temporary) ─────────────────
+app.get('/__routes', (req, res) => {
+  try {
+    const routes = [];
+    app._router.stack.forEach((middleware) => {
+      if (middleware.route) {
+        // routes registered directly on the app
+        const methods = Object.keys(middleware.route.methods).join(',');
+        routes.push({ path: middleware.route.path, methods });
+      } else if (middleware.name === 'router' && middleware.handle && middleware.handle.stack) {
+        // router middleware
+        middleware.handle.stack.forEach((handler) => {
+          if (handler.route) {
+            const methods = Object.keys(handler.route.methods).join(',');
+            routes.push({ path: handler.route.path, methods });
+          }
+        });
+      }
+    });
+    res.json({ routes });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to enumerate routes', detail: String(err) });
+  }
 });
 
 // ── 404 handler ────────────────────────────────────────────────

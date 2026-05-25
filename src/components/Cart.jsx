@@ -1,4 +1,5 @@
 import React from 'react';
+import placeholderImage from '../assets/placeholder.svg';
 import { ChevronDown, ArrowLeft, ShieldCheck, Truck, MessageSquare } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -51,7 +52,7 @@ const Cart = ({ setPage, onAuthRequired }) => {
                     {/* Product Image */}
                     <div className="w-[80px] h-[80px] lg:w-[100px] lg:h-[100px] border border-[#DEE2E7] rounded-lg p-3 flex items-center justify-center bg-[#F7F7F7] flex-shrink-0 group overflow-hidden">
                       <img
-                        src={product.image || 'https://via.placeholder.com/150'}
+                        src={product.image || placeholderImage}
                         alt={product.title}
                         className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform duration-300"
                       />

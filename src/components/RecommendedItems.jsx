@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import placeholderImage from '../assets/placeholder.svg';
 
 const RecommendedItems = ({ setPage, onProductClick }) => {
   const [items, setItems] = useState([]);
@@ -35,8 +36,9 @@ const RecommendedItems = ({ setPage, onProductClick }) => {
               >
                 <div className="flex-1 flex items-center justify-center p-4 mb-3 bg-[#F7F7F7] rounded-md overflow-hidden aspect-square">
                   <img
-                    src={product.image || 'https://via.placeholder.com/150'}
+                    src={product.image || placeholderImage}
                     alt={product.title}
+                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = placeholderImage; }}
                     className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-300"
                   />
                 </div>

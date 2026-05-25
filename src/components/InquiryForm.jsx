@@ -1,7 +1,54 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import bgImg from '../assets/Image/backgrounds/image 107.png';
 
-const InquiryForm = () => {
+const InquiryForm = ({ setPage }) => {
+  const [subject, setSubject] = useState('');
+  const [details, setDetails] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [unit, setUnit] = useState('Pcs');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+
+  const { getToken } = useAuth();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    if (!subject.trim() || !details.trim()) {
+      setError('Please provide subject and details');
+      return;
+    }
+    setLoading(true);
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      const token = getToken();
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch('/api/inquiries', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ subject, details, quantity, unit }),
+      });
+      if (res.ok) {
+        setSuccess('Inquiry sent — admin will be notified.');
+        setSubject('');
+        setDetails('');
+        setQuantity('');
+        setUnit('Pcs');
+      } else {
+        const d = await res.json();
+        setError(d.error || 'Failed to send inquiry');
+      }
+    } catch (err) {
+      setError('Failed to send inquiry');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <section
       className="relative mt-6 rounded-lg overflow-hidden h-[400px] flex items-center bg-cover bg-no-repeat bg-center"
@@ -20,30 +67,43 @@ const InquiryForm = () => {
 
         <div className="bg-white p-6 lg:p-8 rounded-lg shadow-xl w-full max-w-[440px] text-dark">
           <h3 className="text-lg font-bold mb-6">Send quote to suppliers</h3>
-          <form className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && <div className="text-sm text-red-600">{error}</div>}
+            {success && <div className="text-sm text-green-600">{success}</div>}
             <input
               type="text"
               placeholder="What item you need?"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
               className="w-full px-4 py-2 border border-shade-border rounded-md focus:ring-1 focus:ring-primary outline-none"
             />
             <textarea
               placeholder="Type more details"
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
               className="w-full px-4 py-2 border border-shade-border rounded-md h-24 focus:ring-1 focus:ring-primary outline-none resize-none"
             ></textarea>
             <div className="flex gap-4">
               <input
                 type="text"
                 placeholder="Quantity"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
                 className="flex-1 px-4 py-2 border border-shade-border rounded-md outline-none"
               />
-              <select className="px-4 py-2 border border-shade-border rounded-md bg-white outline-none">
+              <select value={unit} onChange={(e) => setUnit(e.target.value)} className="px-4 py-2 border border-shade-border rounded-md bg-white outline-none">
                 <option>Pcs</option>
                 <option>Kgs</option>
               </select>
             </div>
-            <button className="bg-primary hover:bg-primary-dark text-white px-6 py-2 rounded-md font-medium transition-colors">
-              Send inquiry
-            </button>
+            <div className="flex items-center gap-3">
+              <button disabled={loading} className="bg-primary hover:bg-primary-dark text-white px-6 py-2 rounded-md font-medium transition-colors">
+                {loading ? 'Sending...' : 'Send inquiry'}
+              </button>
+              <button type="button" onClick={() => setPage && setPage('home')} className="text-sm text-gray-600">
+                Back
+              </button>
+            </div>
           </form>
         </div>
       </div>
