@@ -34,13 +34,17 @@ app.use((req, res, next) => {
 // Security headers
 app.use(helmet());
 
-// CORS — allow origins via env `ALLOWED_ORIGINS` (comma-separated), default to allow all
+// CORS — allow origins via env `ALLOWED_ORIGINS` (comma-separated)
+const defaultAllowedOrigins = process.env.NODE_ENV === 'production'
+  ? ['https://ecommerce-backend-design-79rtddddd.vercel.app']
+  : [];
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+const effectiveOrigins = allowedOrigins.length > 0 ? allowedOrigins : defaultAllowedOrigins;
 const corsOptions = {};
-if (allowedOrigins.length > 0) {
+if (effectiveOrigins.length > 0) {
   corsOptions.origin = (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
+    if (effectiveOrigins.indexOf(origin) !== -1) return callback(null, true);
     return callback(new Error('CORS blocked by policy'), false);
   };
 } else {
