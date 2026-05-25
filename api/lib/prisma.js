@@ -8,6 +8,7 @@ const globalForPrisma = globalThis;
 
 const pool = globalForPrisma.pgPool ?? new Pool({
   connectionString: process.env.DATABASE_URL,
+  connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS) || 5000,
 });
 
 const prisma = globalForPrisma.prisma ?? new PrismaClient({

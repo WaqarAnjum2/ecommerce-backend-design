@@ -1,5 +1,12 @@
 import redis from '../lib/redis.js';
 
+const withTimeout = (promise, ms) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), ms)),
+  ]);
+};
+
 const getClientId = (req) => {
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string' && forwarded.length > 0) {
@@ -21,9 +28,9 @@ export const rateLimit = ({ keyPrefix, windowSeconds, max }) => {
     const key = `${keyPrefix}:${clientId}`;
 
     try {
-      const current = await redis.incr(key);
+      const current = await withTimeout(redis.incr(key), 800);
       if (current === 1) {
-        await redis.expire(key, windowSeconds);
+        await withTimeout(redis.expire(key, windowSeconds), 800);
       }
 
       const remaining = Math.max(max - current, 0);

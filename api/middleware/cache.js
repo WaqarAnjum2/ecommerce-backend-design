@@ -1,5 +1,12 @@
 import redis from '../lib/redis.js';
 
+const withTimeout = (promise, ms) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), ms)),
+  ]);
+};
+
 // Cache-Control header for private routes
 export function noCacheHeaders(req, res, next) {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -40,7 +47,7 @@ export function cacheMiddleware(keyPrefix, ttlSeconds = 3600) {
       res.cacheTtl = ttlSeconds;
 
       // Try fetching from Redis
-      const cachedData = await redis.get(key);
+      const cachedData = await withTimeout(redis.get(key), 800);
       if (cachedData) {
         // Set Edge CDN header
         res.setHeader('X-Cache', 'HIT');
@@ -64,9 +71,9 @@ export async function storeInCache(res, data) {
   if (res.cacheKey && redis && typeof redis.set === 'function') {
     try {
       // In serverless, store the stringified version
-      await redis.set(res.cacheKey, JSON.stringify(data), {
+      await withTimeout(redis.set(res.cacheKey, JSON.stringify(data), {
         ex: res.cacheTtl || 3600
-      });
+      }), 800);
     } catch (err) {
       console.error('Failed to store in cache:', err);
     }
