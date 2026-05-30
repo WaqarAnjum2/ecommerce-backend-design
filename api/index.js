@@ -99,7 +99,7 @@ app.get('/__routes', (req, res) => {
 });
 
 // ── API 404 handler ────────────────────────────────────────────
-apiRouter.use('*', (req, res) => {
+apiRouter.use((req, res) => {
   res.status(404).json({ error: 'API route not found' });
 });
 
