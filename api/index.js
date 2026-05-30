@@ -36,11 +36,21 @@ app.use((req, res, next) => {
 app.use(helmet());
 
 // CORS — allow origins via env `ALLOWED_ORIGINS` (comma-separated)
+const localOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
+];
+const vercelOrigin = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
 const defaultAllowedOrigins = process.env.NODE_ENV === 'production'
-  ? ['https://ecommerce-backend-design-79rtddddd.vercel.app']
+  ? ['https://ecommerce-backend-design-79rt.vercel.app', vercelOrigin].filter(Boolean)
   : [];
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
-const effectiveOrigins = allowedOrigins.length > 0 ? allowedOrigins : defaultAllowedOrigins;
+const effectiveOrigins = Array.from(new Set([
+  ...(allowedOrigins.length > 0 ? allowedOrigins : defaultAllowedOrigins),
+  ...localOrigins,
+]));
 const corsOptions = {};
 if (effectiveOrigins.length > 0) {
   corsOptions.origin = (origin, callback) => {
@@ -118,7 +128,8 @@ app.use((err, req, res, next) => {
 });
 
 // ── Export for Vercel Serverless ────────────────────────────────
-export default serverless(app);
+const handler = process.env.VERCEL ? app : serverless(app);
+export default handler;
 
 // ── Local development server ───────────────────────────────────
 if (process.env.NODE_ENV !== 'production') {
