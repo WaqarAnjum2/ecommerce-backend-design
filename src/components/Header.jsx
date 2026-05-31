@@ -17,6 +17,11 @@ const Header = ({ setPage, onAuthRequired, searchQuery, setSearchQuery }) => {
   const shipRef = useRef(null);
   const helpRef = useRef(null);
 
+  // Sync searchInput when searchQuery changes externally
+  useEffect(() => {
+    setSearchInput(searchQuery || '');
+  }, [searchQuery]);
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setSearchQuery(searchInput);

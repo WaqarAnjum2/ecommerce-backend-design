@@ -56,7 +56,27 @@ router.get('/', cacheMiddleware('cache:products:query', 3600), async (req, res) 
     if (brand) {
       // Support comma-separated brands: ?brand=Samsung,Apple
       const brands = brand.split(',').map((b) => b.trim());
-      where.brand = { in: brands, mode: 'insensitive' };
+      // Prisma's 'in' doesn't support mode, so we use OR with insensitive contains
+      if (brands.length === 1) {
+        where.brand = { equals: brands[0], mode: 'insensitive' };
+      } else {
+        // For multiple brands, we need to use OR
+        if (!where.OR) {
+          where.OR = [];
+        }
+        // If OR already exists (from search), we need to combine them with AND
+        const existingOR = where.OR;
+        if (existingOR.length > 0) {
+          // Combine search OR with brand OR using AND
+          where.AND = [
+            { OR: existingOR },
+            { OR: brands.map(b => ({ brand: { equals: b, mode: 'insensitive' } })) }
+          ];
+          delete where.OR;
+        } else {
+          where.OR = brands.map(b => ({ brand: { equals: b, mode: 'insensitive' } }));
+        }
+      }
     }
 
     // Build orderBy

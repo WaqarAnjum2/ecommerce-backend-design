@@ -93,16 +93,18 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
   }, [searchQuery, selectedBrands, selectedRatings, minPrice, maxPrice]);
 
   const toggleBrand = (brand) => {
-    setSelectedBrands((prev) =>
-      prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
-    );
+    setSelectedBrands((prev) => {
+      const newBrands = prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand];
+      return newBrands;
+    });
     setPageNum(1);
   };
 
   const toggleRating = (rating) => {
-    setSelectedRatings((prev) =>
-      prev.includes(rating) ? prev.filter((r) => r !== rating) : [...prev, rating]
-    );
+    setSelectedRatings((prev) => {
+      const newRatings = prev.includes(rating) ? prev.filter((r) => r !== rating) : [...prev, rating];
+      return newRatings;
+    });
     setPageNum(1);
   };
 
@@ -133,9 +135,7 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
   };
 
   const handleApplyPrice = () => {
-    const nextPage = 1;
-    setPageNum(nextPage);
-    fetchProducts(nextPage);
+    setPageNum(1);
   };
 
   return (
