@@ -1292,14 +1292,11 @@ npm run dev
 
 ---
 
-## Repository Link Placeholder
 
-**ADD YOUR REPOSITORY URL HERE**
-- GitHub: [Your Repository URL]
-- Live Demo: [Your Deployment URL]
-- Documentation: [This Report]
+
+- Live Demo: [[Your Deployment URL]](https://ecommerce-backend-design-79rt.vercel.app/)
+
 
 ---
 
-*Generated: Technical Report for E-Commerce Full-Stack Platform*
-*Version: 1.0.0*
+
