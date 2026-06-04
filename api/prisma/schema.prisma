@@ -509,24 +509,27 @@ model Category {
 }
 
 model Product {
-  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title       String
-  price       Decimal     @db.Decimal(10, 2)
-  oldPrice    Decimal?    @map("old_price") @db.Decimal(10, 2)
-  desc        String?     @map("description")
-  categoryId  String?     @map("category_id") @db.Uuid
-  image       String?     @map("image_url")
-  brand       String?
-  rating      Decimal?    @default(0.0) @db.Decimal(2, 1)
-  orders      Int         @default(0) @map("orders_count")
-  shipping    String      @default("Free Shipping")
-  stock       Int         @default(0)
-  features    String[]    @default([])
-  createdAt   DateTime    @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime    @default(dbgenerated("timezone('utc'::text, now())")) @map("updated_at") @db.Timestamptz(6)
-  imageUrls   String[]    @default([]) @map("image_urls")
-  orderItems  OrderItem[]
-  category    Category?   @relation(fields: [categoryId], references: [id], onUpdate: NoAction)
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title          String
+  price          Decimal         @db.Decimal(10, 2)
+  oldPrice       Decimal?        @map("old_price") @db.Decimal(10, 2)
+  desc           String?         @map("description")
+  categoryId     String?         @map("category_id") @db.Uuid
+  image          String?         @map("image_url")
+  brand          String?
+  rating         Decimal?        @default(0.0) @db.Decimal(2, 1)
+  orders         Int             @default(0) @map("orders_count")
+  shipping       String          @default("Free Shipping")
+  stock          Int             @default(0)
+  features       String[]        @default([])
+  createdAt      DateTime        @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime        @default(dbgenerated("timezone('utc'::text, now())")) @map("updated_at") @db.Timestamptz(6)
+  imageUrls      String[]        @default([]) @map("image_urls")
+  orderItems     OrderItem[]
+  cartItems      CartItem[]
+  favorites      Favorite[]
+  productReviews ProductReview[]
+  category       Category?       @relation(fields: [categoryId], references: [id], onUpdate: NoAction)
 
   @@index([categoryId], map: "idx_products_category_id")
   @@index([orders], map: "idx_products_orders_count")
@@ -537,16 +540,19 @@ model Product {
 }
 
 model Profile {
-  id           String         @id @db.Uuid
-  email        String         @unique
-  fullName     String?        @map("full_name")
-  avatarUrl    String?        @map("avatar_url")
-  isAdmin      Boolean        @default(false) @map("is_admin")
-  createdAt    DateTime       @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime       @default(dbgenerated("timezone('utc'::text, now())")) @map("updated_at") @db.Timestamptz(6)
-  orderHistory OrderHistory[]
-  orders       Order[]
-  user         users          @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id             String           @id @db.Uuid
+  email          String           @unique
+  fullName       String?          @map("full_name")
+  avatarUrl      String?          @map("avatar_url")
+  isAdmin        Boolean          @default(false) @map("is_admin")
+  createdAt      DateTime         @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @default(dbgenerated("timezone('utc'::text, now())")) @map("updated_at") @db.Timestamptz(6)
+  orderHistory   OrderHistory[]
+  orders         Order[]
+  cartItems      CartItem[]
+  favorites      Favorite[]
+  productReviews ProductReview[]
+  user           users            @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("profiles")
   @@schema("public")
@@ -594,6 +600,67 @@ model OrderHistory {
   user        Profile  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("order_history")
+  @@schema("public")
+}
+
+model CartItem {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  quantity  Int
+  createdAt DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("updated_at") @db.Timestamptz(6)
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+  @@map("cart_items")
+  @@schema("public")
+}
+
+model Favorite {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  createdAt DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz(6)
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+  @@map("favorites")
+  @@schema("public")
+}
+
+model NewsletterSubscriber {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String   @unique
+  subscribedAt DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("subscribed_at") @db.Timestamptz(6)
+
+  @@index([email])
+  @@map("newsletter_subscribers")
+  @@schema("public")
+}
+
+model ProductReview {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  rating    Int      @db.SmallInt
+  comment   String   @db.Text
+  createdAt DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("updated_at") @db.Timestamptz(6)
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, productId])
+  @@index([productId])
+  @@index([userId])
+  @@index([rating])
+  @@map("product_reviews")
   @@schema("public")
 }
 

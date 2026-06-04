@@ -11,6 +11,7 @@ export default function PaymentMethods({ setPage, onAuthRequired }) {
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
   const [cardName, setCardName] = useState('');
+  const [errors, setErrors] = useState({});
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,10 +26,136 @@ export default function PaymentMethods({ setPage, onAuthRequired }) {
   const discount = items.length > 0 ? 60.00 : 0.00;
   const tax = items.length > 0 ? 14.00 : 0.00;
   const finalTotal = Math.max(0, total - discount + tax);
+  const NAME_REGEX = /^[A-Za-z][A-Za-z\s.'-]{1,59}$/;
+
+  const isValidLuhn = (value) => {
+    let sum = 0;
+    let shouldDouble = false;
+
+    for (let i = value.length - 1; i >= 0; i -= 1) {
+      let digit = Number(value[i]);
+      if (Number.isNaN(digit)) return false;
+
+      if (shouldDouble) {
+        digit *= 2;
+        if (digit > 9) digit -= 9;
+      }
+
+      sum += digit;
+      shouldDouble = !shouldDouble;
+    }
+
+    return sum % 10 === 0;
+  };
+
+  const validateField = (field, value) => {
+    const trimmed = value.trim();
+
+    switch (field) {
+      case 'cardName':
+        if (!trimmed) return 'Cardholder name is required.';
+        if (!NAME_REGEX.test(trimmed)) {
+          return 'Use 2-60 letters with spaces, apostrophes, or hyphens.';
+        }
+        return '';
+      case 'cardNumber':
+        if (!/^\d{13,19}$/.test(value)) return 'Card number must be 13-19 digits.';
+        if (!isValidLuhn(value)) return 'Card number is not valid.';
+        return '';
+      case 'expiry':
+        if (!/^\d{2}\/\d{2}$/.test(value)) return 'Use MM/YY format.';
+        {
+          const [mm, yy] = value.split('/');
+          const month = Number(mm);
+          const year = 2000 + Number(yy);
+          const maxYear = new Date().getFullYear() + 20;
+
+          if (month < 1 || month > 12) return 'Expiration month is invalid.';
+          const expiresAt = new Date(year, month, 0, 23, 59, 59);
+          if (expiresAt < new Date()) return 'Card is expired.';
+          if (year > maxYear) return 'Expiration year is too far in the future.';
+        }
+        return '';
+      case 'cvv':
+        {
+          const isAmex = /^3[47]/.test(cardNumber);
+          const cvvPattern = isAmex ? /^\d{4}$/ : /^\d{3}$/;
+          if (!cvvPattern.test(value)) {
+            return isAmex ? 'CVV must be 4 digits for AmEx.' : 'CVV must be 3 digits.';
+          }
+        }
+        return '';
+      default:
+        return '';
+    }
+  };
+
+  const validateForm = () => {
+    return {
+      cardName: validateField('cardName', cardName),
+      cardNumber: validateField('cardNumber', cardNumber),
+      expiry: validateField('expiry', expiry),
+      cvv: validateField('cvv', cvv),
+    };
+  };
+
+  const handleFieldChange = (field, setter) => (event) => {
+    setter(event.target.value);
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const handleCardNumberChange = (event) => {
+    const sanitized = event.target.value.replace(/\D/g, '').slice(0, 19);
+    setCardNumber(sanitized);
+    if (errors.cardNumber) {
+      setErrors((prev) => ({ ...prev, cardNumber: '' }));
+    }
+  };
+
+  const handleExpiryChange = (event) => {
+    const digits = event.target.value.replace(/\D/g, '').slice(0, 4);
+    const formatted = digits.length > 2
+      ? `${digits.slice(0, 2)}/${digits.slice(2)}`
+      : digits;
+
+    setExpiry(formatted);
+    if (errors.expiry) {
+      setErrors((prev) => ({ ...prev, expiry: '' }));
+    }
+  };
+
+  const handleCvvChange = (event) => {
+    const sanitized = event.target.value.replace(/\D/g, '').slice(0, 4);
+    setCvv(sanitized);
+    if (errors.cvv) {
+      setErrors((prev) => ({ ...prev, cvv: '' }));
+    }
+  };
+
+  const handleFieldBlur = (field, value) => {
+    const message = validateField(field, value);
+    setErrors((prev) => ({ ...prev, [field]: message }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    const nextErrors = validateForm();
+    const hasErrors = Object.values(nextErrors).some(Boolean);
+
+    if (hasErrors) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    setErrors({});
+    if (items.length === 0) {
+      setError('Your cart is empty.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -110,10 +237,22 @@ export default function PaymentMethods({ setPage, onAuthRequired }) {
                 type="text"
                 required
                 value={cardName}
-                onChange={(e) => setCardName(e.target.value)}
-                placeholder="e.g. John Doe"
-                className="w-full border border-[#DEE2E7] rounded-lg px-4 py-2.5 outline-none focus:border-primary"
+                onChange={handleFieldChange('cardName', setCardName)}
+                onBlur={() => handleFieldBlur('cardName', cardName)}
+                placeholder="Name on card"
+                minLength={2}
+                maxLength={60}
+                pattern="[A-Za-z][A-Za-z\s.'-]{1,59}"
+                title="Use 2-60 letters with spaces, apostrophes, or hyphens."
+                autoComplete="cc-name"
+                className={`w-full border rounded-lg px-4 py-2.5 outline-none ${
+                  errors.cardName ? 'border-red-300 focus:border-red-500' : 'border-[#DEE2E7] focus:border-primary'
+                }`}
+                aria-invalid={Boolean(errors.cardName)}
               />
+              {errors.cardName && (
+                <p className="mt-1 text-xs text-red-600">{errors.cardName}</p>
+              )}
             </div>
 
             <div>
@@ -125,14 +264,24 @@ export default function PaymentMethods({ setPage, onAuthRequired }) {
                 <input
                   type="text"
                   required
-                  pattern="\d{16}"
-                  maxLength={16}
+                  maxLength={19}
                   value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, ''))}
-                  placeholder="16-digit card number"
-                  className="w-full border border-[#DEE2E7] rounded-lg px-4 py-2.5 pl-10 outline-none focus:border-primary"
+                  onChange={handleCardNumberChange}
+                  onBlur={() => handleFieldBlur('cardNumber', cardNumber)}
+                  placeholder="Card number"
+                  inputMode="numeric"
+                  pattern="\d{13,19}"
+                  title="Enter 13-19 digits."
+                  autoComplete="cc-number"
+                  className={`w-full border rounded-lg px-4 py-2.5 pl-10 outline-none ${
+                    errors.cardNumber ? 'border-red-300 focus:border-red-500' : 'border-[#DEE2E7] focus:border-primary'
+                  }`}
+                  aria-invalid={Boolean(errors.cardNumber)}
                 />
               </div>
+              {errors.cardNumber && (
+                <p className="mt-1 text-xs text-red-600">{errors.cardNumber}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -144,22 +293,43 @@ export default function PaymentMethods({ setPage, onAuthRequired }) {
                   placeholder="MM/YY"
                   maxLength={5}
                   value={expiry}
-                  onChange={(e) => setExpiry(e.target.value)}
-                  className="w-full border border-[#DEE2E7] rounded-lg px-4 py-2.5 outline-none focus:border-primary"
+                  onChange={handleExpiryChange}
+                  onBlur={() => handleFieldBlur('expiry', expiry)}
+                  inputMode="numeric"
+                  pattern="\d{2}/\d{2}"
+                  title="Use MM/YY format."
+                  autoComplete="cc-exp"
+                  className={`w-full border rounded-lg px-4 py-2.5 outline-none ${
+                    errors.expiry ? 'border-red-300 focus:border-red-500' : 'border-[#DEE2E7] focus:border-primary'
+                  }`}
+                  aria-invalid={Boolean(errors.expiry)}
                 />
+                {errors.expiry && (
+                  <p className="mt-1 text-xs text-red-600">{errors.expiry}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-[#505050] mb-1">CVV</label>
                 <input
                   type="password"
                   required
-                  maxLength={3}
-                  pattern="\d{3}"
+                  maxLength={4}
                   value={cvv}
-                  onChange={(e) => setCvv(e.target.value.replace(/\D/g, ''))}
-                  placeholder="123"
-                  className="w-full border border-[#DEE2E7] rounded-lg px-4 py-2.5 outline-none focus:border-primary"
+                  onChange={handleCvvChange}
+                  onBlur={() => handleFieldBlur('cvv', cvv)}
+                  placeholder="Security code"
+                  inputMode="numeric"
+                  pattern="\d{3,4}"
+                  title="Enter 3 digits (4 for AmEx)."
+                  autoComplete="cc-csc"
+                  className={`w-full border rounded-lg px-4 py-2.5 outline-none ${
+                    errors.cvv ? 'border-red-300 focus:border-red-500' : 'border-[#DEE2E7] focus:border-primary'
+                  }`}
+                  aria-invalid={Boolean(errors.cvv)}
                 />
+                {errors.cvv && (
+                  <p className="mt-1 text-xs text-red-600">{errors.cvv}</p>
+                )}
               </div>
             </div>
 
