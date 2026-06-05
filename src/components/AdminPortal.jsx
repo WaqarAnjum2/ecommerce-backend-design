@@ -16,15 +16,19 @@ import {
   Layers,
   Search,
   Grid,
-  List
+  List,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 const AdminPortal = ({ setPage }) => {
   const { user, profile, refetchProfile, signOut, updatePassword, getToken } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, orders, products, add-product, profile, order-history
   const [newPassword, setNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [modalState, setModalState] = useState({
     isOpen: false,
@@ -34,6 +38,7 @@ const AdminPortal = ({ setPage }) => {
     confirmText: 'OK',
     cancelText: 'Cancel',
     showCancel: false,
+    dialogSize: 'md',
     onConfirm: null,
   });
 
@@ -65,12 +70,17 @@ const AdminPortal = ({ setPage }) => {
     stock: '10',
     shipping: 'Free Shipping',
     featuresInput: '',
-    imageUrls: ['']
+    imageFiles: [],
+    imagePreviews: []
   });
+  const [imageInputKey, setImageInputKey] = useState(0);
+  const [editImageInputKey, setEditImageInputKey] = useState(0);
 
   const [profileForm, setProfileForm] = useState({
     fullName: '',
-    avatarUrl: ''
+    avatarUrl: '',
+    avatarFile: null,
+    avatarPreview: ''
   });
 
   const openModal = (nextState) => {
@@ -82,6 +92,7 @@ const AdminPortal = ({ setPage }) => {
       confirmText: 'OK',
       cancelText: 'Cancel',
       showCancel: false,
+      dialogSize: 'md',
       onConfirm: null,
       ...nextState,
     });
@@ -113,6 +124,448 @@ const AdminPortal = ({ setPage }) => {
     });
   };
 
+  const formatCurrency = (value) => `$${Number(value || 0).toFixed(2)}`;
+
+  const getOrderDetailData = (entry) => {
+    const sourceOrder = entry?.order || entry || {};
+    const items = Array.isArray(sourceOrder.items) ? sourceOrder.items : [];
+    return {
+      id: sourceOrder.id || entry?.orderId || entry?.id || 'Unknown',
+      totalAmount: entry?.totalAmount ?? sourceOrder.totalAmount ?? 0,
+      status: entry?.status || sourceOrder.status || 'Pending',
+      createdAt: sourceOrder.createdAt || entry?.createdAt || null,
+      completedAt: entry?.completedAt || null,
+      user: entry?.user || sourceOrder.user || null,
+      items,
+    };
+  };
+
+  const renderOrderDetailContent = (entry, sourceLabel) => {
+    const order = getOrderDetailData(entry);
+    const itemCount = order.items.reduce((count, item) => count + Number(item.quantity || 0), 0);
+
+    return (
+      <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-[color:var(--admin-border)] bg-white/80 p-3">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--admin-muted)]">Order ID</p>
+            <p className="mt-1 text-sm font-semibold text-[color:var(--admin-ink)] break-all">{order.id}</p>
+          </div>
+          <div className="rounded-xl border border-[color:var(--admin-border)] bg-white/80 p-3">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--admin-muted)]">Source</p>
+            <p className="mt-1 text-sm font-semibold text-[color:var(--admin-ink)]">{sourceLabel}</p>
+          </div>
+          <div className="rounded-xl border border-[color:var(--admin-border)] bg-white/80 p-3">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--admin-muted)]">Status</p>
+            <p className="mt-1 text-sm font-semibold text-[color:var(--admin-ink)]">{order.status}</p>
+          </div>
+          <div className="rounded-xl border border-[color:var(--admin-border)] bg-white/80 p-3">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--admin-muted)]">Total</p>
+            <p className="mt-1 text-sm font-semibold text-[color:var(--admin-ink)]">{formatCurrency(order.totalAmount)}</p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-[color:var(--admin-border)] bg-white/80 p-4">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--admin-muted)] mb-2">Customer</p>
+            <p className="text-sm font-semibold text-[color:var(--admin-ink)]">{order.user?.fullName || 'Anonymous'}</p>
+            <p className="text-sm text-[color:var(--admin-muted)]">{order.user?.email || '-'}</p>
+          </div>
+          <div className="rounded-xl border border-[color:var(--admin-border)] bg-white/80 p-4">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--admin-muted)] mb-2">Dates</p>
+            <p className="text-sm text-[color:var(--admin-ink)]">
+              Ordered: {order.createdAt ? new Date(order.createdAt).toLocaleString() : '-'}
+            </p>
+            <p className="text-sm text-[color:var(--admin-ink)]">
+              Completed: {order.completedAt ? new Date(order.completedAt).toLocaleString() : '-'}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-[color:var(--admin-border)] bg-white/80 overflow-hidden">
+          <div className="flex items-center justify-between gap-3 border-b border-[color:var(--admin-border)] px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-[color:var(--admin-ink)]">Order Items</p>
+              <p className="text-xs text-[color:var(--admin-muted)]">{order.items.length} products, {itemCount} total units</p>
+            </div>
+            <p className="text-xs font-semibold text-[color:var(--admin-muted)] uppercase tracking-[0.15em]">Detail view</p>
+          </div>
+          {order.items.length === 0 ? (
+            <div className="p-4 text-sm text-[color:var(--admin-muted)]">No item details are available for this order.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-[#f8fafc] text-[color:var(--admin-muted)] uppercase text-[11px] tracking-[0.15em]">
+                  <tr>
+                    <th className="px-4 py-3">Product</th>
+                    <th className="px-4 py-3">Qty</th>
+                    <th className="px-4 py-3">Unit Price</th>
+                    <th className="px-4 py-3">Line Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[color:var(--admin-border)]">
+                  {order.items.map((item) => {
+                    const unitPrice = Number(item.price || item.product?.price || 0);
+                    const quantity = Number(item.quantity || 0);
+                    const lineTotal = unitPrice * quantity;
+
+                    return (
+                      <tr key={item.id} className="align-top">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl border border-[color:var(--admin-border)] bg-white overflow-hidden flex-shrink-0 flex items-center justify-center">
+                              <img
+                                src={item.product?.image || item.product?.imageUrls?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80&fm=webp'}
+                                alt={item.product?.title || 'Product'}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-[color:var(--admin-ink)]">{item.product?.title || 'Unknown Product'}</p>
+                              <p className="text-xs text-[color:var(--admin-muted)] break-all">{item.product?.id || item.productId || '-'}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-[color:var(--admin-ink)]">{quantity}</td>
+                        <td className="px-4 py-3">{formatCurrency(unitPrice)}</td>
+                        <td className="px-4 py-3 font-semibold text-[color:var(--admin-ink)]">{formatCurrency(lineTotal)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-[color:var(--admin-border)] bg-white/80 p-3">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--admin-muted)]">Items</p>
+            <p className="mt-1 text-sm font-semibold text-[color:var(--admin-ink)]">{order.items.length}</p>
+          </div>
+          <div className="rounded-xl border border-[color:var(--admin-border)] bg-white/80 p-3">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--admin-muted)]">Total Units</p>
+            <p className="mt-1 text-sm font-semibold text-[color:var(--admin-ink)]">{itemCount}</p>
+          </div>
+          <div className="rounded-xl border border-[color:var(--admin-border)] bg-white/80 p-3">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--admin-muted)]">Grand Total</p>
+            <p className="mt-1 text-sm font-semibold text-[color:var(--admin-ink)]">{formatCurrency(order.totalAmount)}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const openOrderDetailModal = (entry, sourceLabel) => {
+    openModal({
+      title: 'Order full details',
+      message: renderOrderDetailContent(entry, sourceLabel),
+      type: 'info',
+      confirmText: 'Close',
+      showCancel: false,
+      dialogSize: 'xl',
+    });
+  };
+
+  const storageBucket = import.meta.env.VITE_SUPABASE_STORAGE_BUCKET || 'product-images';
+
+  const sanitizeDecimalInput = (value) => {
+    const normalized = String(value ?? '').replace(/[^\d.]/g, '');
+    const [wholePart = '', ...fractionParts] = normalized.split('.');
+
+    if (fractionParts.length === 0) {
+      return normalized;
+    }
+
+    return `${wholePart}.${fractionParts.join('').replace(/\./g, '')}`;
+  };
+
+  const sanitizeIntegerInput = (value) => String(value ?? '').replace(/\D/g, '');
+
+  const isImageFile = (file) => Boolean(file && typeof file.type === 'string' && file.type.startsWith('image/'));
+
+  const validateProductNumbers = (form, productLabel) => {
+    if (!String(form.title || '').trim()) {
+      openInfo({ title: 'Validation error', message: `${productLabel} title is required.`, type: 'error' });
+      return null;
+    }
+
+    const parsedPrice = Number(form.price);
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+      openInfo({ title: 'Validation error', message: 'Price must be a number greater than 0.', type: 'error' });
+      return null;
+    }
+
+    if (form.oldPrice !== '' && form.oldPrice !== null && form.oldPrice !== undefined) {
+      const parsedOldPrice = Number(form.oldPrice);
+      if (!Number.isFinite(parsedOldPrice) || parsedOldPrice < 0) {
+        openInfo({ title: 'Validation error', message: 'Old price must be a non-negative number.', type: 'error' });
+        return null;
+      }
+    }
+
+    const parsedStock = Number(form.stock);
+    if (!Number.isInteger(parsedStock) || parsedStock < 0) {
+      openInfo({ title: 'Validation error', message: 'Stock must be a non-negative integer.', type: 'error' });
+      return null;
+    }
+
+    return {
+      price: parsedPrice,
+      oldPrice: form.oldPrice === '' || form.oldPrice === null || form.oldPrice === undefined ? null : Number(form.oldPrice),
+      stock: parsedStock
+    };
+  };
+
+  const revokePreviewUrls = (urls) => {
+    if (!urls || urls.length === 0) return;
+    urls.forEach((url) => URL.revokeObjectURL(url));
+  };
+
+  const getImageSource = (file) => {
+    if (typeof createImageBitmap === 'function') {
+      return createImageBitmap(file);
+    }
+
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Failed to load image.'));
+      };
+      img.src = url;
+    });
+  };
+
+  const convertToWebp = async (file, options = {}) => {
+    const maxSize = options.maxSize || 1600;
+    const quality = options.quality || 0.82;
+    const source = await getImageSource(file);
+    const sourceWidth = source.width || source.naturalWidth;
+    const sourceHeight = source.height || source.naturalHeight;
+    const scale = Math.min(1, maxSize / Math.max(sourceWidth, sourceHeight));
+    const targetWidth = Math.max(1, Math.round(sourceWidth * scale));
+    const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Image conversion failed.');
+    }
+    ctx.drawImage(source, 0, 0, targetWidth, targetHeight);
+    if (typeof source.close === 'function') {
+      source.close();
+    }
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', quality));
+    if (!blob) {
+      throw new Error('Image conversion failed.');
+    }
+
+    const baseName = file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 40) || 'image';
+    const uniqueId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const fileName = `${baseName}-${uniqueId}.webp`;
+
+    return new File([blob], fileName, { type: 'image/webp' });
+  };
+
+  const uploadImagesToSupabase = async (files, folderKey) => {
+    const uploads = [];
+
+    for (const file of files) {
+      const webpFile = await convertToWebp(file);
+      const path = `products/${folderKey}/${webpFile.name}`;
+      const { error } = await supabase.storage.from(storageBucket).upload(path, webpFile, {
+        contentType: 'image/webp',
+        upsert: true
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const { data } = supabase.storage.from(storageBucket).getPublicUrl(path);
+      if (!data?.publicUrl) {
+        throw new Error('Failed to retrieve image URL.');
+      }
+      uploads.push({ path, url: data.publicUrl });
+    }
+
+    return uploads;
+  };
+
+  const deleteSupabaseImagesByPaths = async (paths) => {
+    if (!paths || paths.length === 0) return;
+    const { error } = await supabase.storage.from(storageBucket).remove(paths);
+    if (error) {
+      console.warn('Failed to delete images from storage:', error.message || error);
+    }
+  };
+
+  const getStoragePathFromUrl = (url) => {
+    try {
+      const parsed = new URL(url);
+      const marker = `/storage/v1/object/public/${storageBucket}/`;
+      const index = parsed.pathname.indexOf(marker);
+      if (index === -1) return null;
+      return decodeURIComponent(parsed.pathname.slice(index + marker.length));
+    } catch (err) {
+      return null;
+    }
+  };
+
+  const deleteSupabaseImagesByUrls = async (urls) => {
+    const paths = (urls || []).map(getStoragePathFromUrl).filter(Boolean);
+    await deleteSupabaseImagesByPaths(paths);
+  };
+
+  const handleImageFilesChange = (fileList, isEdit = false) => {
+    const files = Array.from(fileList || []);
+
+    if (files.length === 0) {
+      openInfo({
+        title: 'No images selected',
+        message: 'Please choose one or more image files to upload.',
+        type: 'error'
+      });
+      return;
+    }
+
+    const invalidFiles = files.filter((file) => !isImageFile(file));
+    if (invalidFiles.length > 0) {
+      openInfo({
+        title: 'Invalid file selected',
+        message: 'Only image files are allowed for product uploads.',
+        type: 'error'
+      });
+      return;
+    }
+
+    const previews = files.map((file) => URL.createObjectURL(file));
+
+    if (isEdit) {
+      if (!editingProduct) return;
+      revokePreviewUrls(editingProduct.newImagePreviews);
+      setEditingProduct({
+        ...editingProduct,
+        imageFiles: files,
+        newImagePreviews: previews
+      });
+      setEditImageInputKey((prev) => prev + 1);
+    } else {
+      revokePreviewUrls(productForm.imagePreviews);
+      setProductForm({
+        ...productForm,
+        imageFiles: files,
+        imagePreviews: previews
+      });
+      setImageInputKey((prev) => prev + 1);
+    }
+  };
+
+  const removeSelectedImage = (index, isEdit = false) => {
+    if (isEdit) {
+      if (!editingProduct) return;
+      const nextFiles = editingProduct.imageFiles.filter((_, idx) => idx !== index);
+      const nextPreviews = editingProduct.newImagePreviews.filter((_, idx) => idx !== index);
+      const removedPreview = editingProduct.newImagePreviews[index];
+      if (removedPreview) {
+        URL.revokeObjectURL(removedPreview);
+      }
+      setEditingProduct({
+        ...editingProduct,
+        imageFiles: nextFiles,
+        newImagePreviews: nextPreviews
+      });
+    } else {
+      const nextFiles = productForm.imageFiles.filter((_, idx) => idx !== index);
+      const nextPreviews = productForm.imagePreviews.filter((_, idx) => idx !== index);
+      const removedPreview = productForm.imagePreviews[index];
+      if (removedPreview) {
+        URL.revokeObjectURL(removedPreview);
+      }
+      setProductForm({
+        ...productForm,
+        imageFiles: nextFiles,
+        imagePreviews: nextPreviews
+      });
+    }
+  };
+
+  const clearSelectedImages = (isEdit = false) => {
+    if (isEdit) {
+      if (!editingProduct) return;
+      revokePreviewUrls(editingProduct.newImagePreviews);
+      setEditingProduct({
+        ...editingProduct,
+        imageFiles: [],
+        newImagePreviews: []
+      });
+      setEditImageInputKey((prev) => prev + 1);
+    } else {
+      revokePreviewUrls(productForm.imagePreviews);
+      setProductForm({
+        ...productForm,
+        imageFiles: [],
+        imagePreviews: []
+      });
+      setImageInputKey((prev) => prev + 1);
+    }
+  };
+
+  const handleProfileAvatarChange = async (file) => {
+    if (!file) {
+      openInfo({
+        title: 'No file selected',
+        message: 'Please choose an image file for the admin avatar.',
+        type: 'error'
+      });
+      return;
+    }
+
+    if (!isImageFile(file)) {
+      openInfo({
+        title: 'Invalid image',
+        message: 'Please select an image file for the admin avatar.',
+        type: 'error'
+      });
+      return;
+    }
+
+    if (profileForm.avatarPreview && profileForm.avatarPreview !== profile?.avatarUrl) {
+      URL.revokeObjectURL(profileForm.avatarPreview);
+    }
+
+    const preview = URL.createObjectURL(file);
+    setProfileForm((prev) => ({
+      ...prev,
+      avatarFile: file,
+      avatarPreview: preview
+    }));
+  };
+
+  const clearProfileAvatarSelection = () => {
+    if (profileForm.avatarPreview && profileForm.avatarPreview !== profile?.avatarUrl) {
+      URL.revokeObjectURL(profileForm.avatarPreview);
+    }
+
+    setProfileForm((prev) => ({
+      ...prev,
+      avatarFile: null,
+      avatarPreview: profile?.avatarUrl || '',
+      avatarUrl: profile?.avatarUrl || ''
+    }));
+  };
+
   const getModalAccentClass = (type) => {
     if (type === 'success') return 'text-teal';
     if (type === 'error') return 'text-red-600';
@@ -139,7 +592,9 @@ const AdminPortal = ({ setPage }) => {
     if (profile) {
       setProfileForm({
         fullName: profile.fullName || '',
-        avatarUrl: profile.avatarUrl || ''
+        avatarUrl: profile.avatarUrl || '',
+        avatarFile: null,
+        avatarPreview: profile.avatarUrl || ''
       });
     }
   }, [profile]);
@@ -361,64 +816,19 @@ const AdminPortal = ({ setPage }) => {
     });
   };
 
-  // Handle image URL changes in forms
-  const handleImageUrlChange = (index, value, isEdit = false) => {
-    if (isEdit) {
-      const updatedUrls = [...editingProduct.imageUrls];
-      updatedUrls[index] = value;
-      setEditingProduct({ ...editingProduct, imageUrls: updatedUrls });
-    } else {
-      const updatedUrls = [...productForm.imageUrls];
-      updatedUrls[index] = value;
-      setProductForm({ ...productForm, imageUrls: updatedUrls });
+  const closeEditModal = () => {
+    if (editingProduct?.newImagePreviews?.length) {
+      revokePreviewUrls(editingProduct.newImagePreviews);
     }
-  };
-
-  const addImageUrlInput = (isEdit = false) => {
-    if (isEdit) {
-      setEditingProduct({
-        ...editingProduct,
-        imageUrls: [...editingProduct.imageUrls, '']
-      });
-    } else {
-      setProductForm({
-        ...productForm,
-        imageUrls: [...productForm.imageUrls, '']
-      });
-    }
-  };
-
-  const removeImageUrlInput = (index, isEdit = false) => {
-    if (isEdit) {
-      const updatedUrls = editingProduct.imageUrls.filter((_, idx) => idx !== index);
-      setEditingProduct({
-        ...editingProduct,
-        imageUrls: updatedUrls.length > 0 ? updatedUrls : ['']
-      });
-    } else {
-      const updatedUrls = productForm.imageUrls.filter((_, idx) => idx !== index);
-      setProductForm({
-        ...productForm,
-        imageUrls: updatedUrls.length > 0 ? updatedUrls : ['']
-      });
-    }
+    setEditingProduct(null);
   };
 
   // Handle Add Product Submit
   const handleAddProduct = (e) => {
     e.preventDefault();
 
-    // Client-side validations
-    if (!productForm.title || String(productForm.title).trim() === '') {
-      openInfo({ title: 'Validation error', message: 'Product title is required.', type: 'error' });
-      return;
-    }
-    if (productForm.price === '' || isNaN(Number(productForm.price)) || Number(productForm.price) <= 0) {
-      openInfo({ title: 'Validation error', message: 'Price must be a number greater than 0.', type: 'error' });
-      return;
-    }
-    if (productForm.stock !== '' && (isNaN(Number(productForm.stock)) || Number(productForm.stock) < 0)) {
-      openInfo({ title: 'Validation error', message: 'Stock must be a non-negative integer.', type: 'error' });
+    const parsedNumbers = validateProductNumbers(productForm, 'Product');
+    if (!parsedNumbers) {
       return;
     }
 
@@ -429,22 +839,27 @@ const AdminPortal = ({ setPage }) => {
       onConfirm: async () => {
         setLoading(true);
 
-        const filteredUrls = productForm.imageUrls.filter(url => url.trim() !== '');
-
-        const payload = {
-          title: productForm.title,
-          price: productForm.price,
-          oldPrice: productForm.oldPrice || null,
-          desc: productForm.desc,
-          categoryId: productForm.categoryId || null,
-          brand: productForm.brand,
-          stock: productForm.stock,
-          shipping: productForm.shipping,
-          features: productForm.featuresInput.split(',').map(f => f.trim()).filter(f => f !== ''),
-          imageUrls: filteredUrls
-        };
+        const folderKey = `new-${Date.now()}`;
+        let uploads = [];
 
         try {
+          if (productForm.imageFiles.length > 0) {
+            uploads = await uploadImagesToSupabase(productForm.imageFiles, folderKey);
+          }
+
+          const payload = {
+            title: productForm.title,
+            price: parsedNumbers.price,
+            oldPrice: parsedNumbers.oldPrice,
+            desc: productForm.desc,
+            categoryId: productForm.categoryId || null,
+            brand: productForm.brand,
+            stock: parsedNumbers.stock,
+            shipping: productForm.shipping,
+            features: productForm.featuresInput.split(',').map(f => f.trim()).filter(f => f !== ''),
+            imageUrls: uploads.map((item) => item.url)
+          };
+
           const response = await fetch('/api/products', {
             method: 'POST',
             headers: {
@@ -460,6 +875,7 @@ const AdminPortal = ({ setPage }) => {
               message: 'The product was added successfully.',
               type: 'success'
             });
+            revokePreviewUrls(productForm.imagePreviews);
             setProductForm({
               title: '',
               price: '',
@@ -470,11 +886,14 @@ const AdminPortal = ({ setPage }) => {
               stock: '10',
               shipping: 'Free Shipping',
               featuresInput: '',
-              imageUrls: ['']
+              imageFiles: [],
+              imagePreviews: []
             });
+            setImageInputKey((prev) => prev + 1);
             setActiveTab('products');
           } else {
             const data = await response.json();
+            await deleteSupabaseImagesByPaths(uploads.map((item) => item.path));
             openInfo({
               title: 'Add failed',
               message: data.error || 'Failed to add product.',
@@ -483,9 +902,10 @@ const AdminPortal = ({ setPage }) => {
           }
         } catch (err) {
           console.error(err);
+          await deleteSupabaseImagesByPaths(uploads.map((item) => item.path));
           openInfo({
             title: 'Add failed',
-            message: 'Failed to add product.',
+            message: err?.message || 'Failed to add product.',
             type: 'error'
           });
         } finally {
@@ -552,13 +972,22 @@ const AdminPortal = ({ setPage }) => {
       stock: String(product.stock),
       shipping: product.shipping || 'Free Shipping',
       featuresInput: Array.isArray(product.features) ? product.features.join(', ') : '',
-      imageUrls: Array.isArray(product.imageUrls) && product.imageUrls.length > 0 ? product.imageUrls : [product.image || '']
+      imageUrls: Array.isArray(product.imageUrls) && product.imageUrls.length > 0 ? product.imageUrls : [product.image || ''],
+      imageFiles: [],
+      newImagePreviews: []
     });
+    setEditImageInputKey((prev) => prev + 1);
   };
 
   // Submit Edit Product
   const handleEditProductSubmit = (e) => {
     e.preventDefault();
+    if (!editingProduct) return;
+
+    const parsedNumbers = validateProductNumbers(editingProduct, 'Product');
+    if (!parsedNumbers) {
+      return;
+    }
 
     openConfirm({
       title: 'Update product',
@@ -567,22 +996,28 @@ const AdminPortal = ({ setPage }) => {
       onConfirm: async () => {
         setLoading(true);
 
-        const filteredUrls = editingProduct.imageUrls.filter(url => url.trim() !== '');
-
-        const payload = {
-          title: editingProduct.title,
-          price: editingProduct.price,
-          oldPrice: editingProduct.oldPrice || null,
-          desc: editingProduct.desc,
-          categoryId: editingProduct.categoryId || null,
-          brand: editingProduct.brand,
-          stock: editingProduct.stock,
-          shipping: editingProduct.shipping,
-          features: editingProduct.featuresInput.split(',').map(f => f.trim()).filter(f => f !== ''),
-          imageUrls: filteredUrls
-        };
+        const existingUrls = (editingProduct.imageUrls || []).filter((url) => url && url.trim() !== '');
+        const hasNewImages = editingProduct.imageFiles && editingProduct.imageFiles.length > 0;
+        let uploads = [];
 
         try {
+          if (hasNewImages) {
+            uploads = await uploadImagesToSupabase(editingProduct.imageFiles, editingProduct.id);
+          }
+
+          const payload = {
+            title: editingProduct.title,
+            price: parsedNumbers.price,
+            oldPrice: parsedNumbers.oldPrice,
+            desc: editingProduct.desc,
+            categoryId: editingProduct.categoryId || null,
+            brand: editingProduct.brand,
+            stock: parsedNumbers.stock,
+            shipping: editingProduct.shipping,
+            features: editingProduct.featuresInput.split(',').map(f => f.trim()).filter(f => f !== ''),
+            imageUrls: hasNewImages ? uploads.map((item) => item.url) : existingUrls
+          };
+
           const response = await fetch(`/api/products/${editingProduct.id}`, {
             method: 'PUT',
             headers: {
@@ -593,15 +1028,21 @@ const AdminPortal = ({ setPage }) => {
           });
 
           if (response.ok) {
+            if (hasNewImages) {
+              await deleteSupabaseImagesByUrls(existingUrls);
+            }
             openInfo({
               title: 'Product updated',
               message: 'The product was updated successfully.',
               type: 'success'
             });
-            setEditingProduct(null);
+            closeEditModal();
             fetchProducts();
           } else {
             const data = await response.json();
+            if (hasNewImages) {
+              await deleteSupabaseImagesByPaths(uploads.map((item) => item.path));
+            }
             openInfo({
               title: 'Update failed',
               message: data.error || 'Failed to update product.',
@@ -610,9 +1051,12 @@ const AdminPortal = ({ setPage }) => {
           }
         } catch (err) {
           console.error(err);
+          if (hasNewImages) {
+            await deleteSupabaseImagesByPaths(uploads.map((item) => item.path));
+          }
           openInfo({
             title: 'Update failed',
-            message: 'Failed to update product.',
+            message: err?.message || 'Failed to update product.',
             type: 'error'
           });
         } finally {
@@ -632,8 +1076,31 @@ const AdminPortal = ({ setPage }) => {
       confirmText: 'Save',
       onConfirm: async () => {
         setLoading(true);
+        let uploadedAvatarPath = null;
 
         try {
+          let avatarUrl = profileForm.avatarUrl || profile?.avatarUrl || '';
+
+          if (profileForm.avatarFile) {
+            const webpFile = await convertToWebp(profileForm.avatarFile);
+            const avatarPath = `profiles/${profile?.id || user?.id || 'admin'}/${webpFile.name}`;
+            const uploadResult = await supabase.storage.from(storageBucket).upload(avatarPath, webpFile, {
+              contentType: 'image/webp',
+              upsert: true
+            });
+
+            if (uploadResult.error) {
+              throw uploadResult.error;
+            }
+
+            uploadedAvatarPath = avatarPath;
+            const { data } = supabase.storage.from(storageBucket).getPublicUrl(avatarPath);
+            if (!data?.publicUrl) {
+              throw new Error('Failed to retrieve avatar URL.');
+            }
+            avatarUrl = data.publicUrl;
+          }
+
           const response = await fetch('/api/profiles/me', {
             method: 'PUT',
             headers: {
@@ -642,18 +1109,33 @@ const AdminPortal = ({ setPage }) => {
             },
             body: JSON.stringify({
               fullName: profileForm.fullName,
-              avatarUrl: profileForm.avatarUrl
+              avatarUrl
             })
           });
 
           if (response.ok) {
+            if (profile?.avatarUrl && profileForm.avatarFile) {
+              await deleteSupabaseImagesByUrls([profile.avatarUrl]);
+            }
             openInfo({
               title: 'Profile updated',
               message: 'Your profile was updated successfully.',
               type: 'success'
             });
+            if (profileForm.avatarPreview && profileForm.avatarPreview !== profile?.avatarUrl) {
+              URL.revokeObjectURL(profileForm.avatarPreview);
+            }
+            setProfileForm((prev) => ({
+              ...prev,
+              avatarFile: null,
+              avatarPreview: avatarUrl,
+              avatarUrl
+            }));
             await refetchProfile();
           } else {
+            if (uploadedAvatarPath) {
+              await deleteSupabaseImagesByPaths([uploadedAvatarPath]);
+            }
             const data = await response.json();
             openInfo({
               title: 'Update failed',
@@ -663,6 +1145,9 @@ const AdminPortal = ({ setPage }) => {
           }
         } catch (err) {
           console.error(err);
+          if (uploadedAvatarPath) {
+            await deleteSupabaseImagesByPaths([uploadedAvatarPath]);
+          }
           openInfo({
             title: 'Update failed',
             message: 'Failed to update profile.',
@@ -833,7 +1318,7 @@ const AdminPortal = ({ setPage }) => {
         <div className="p-4 border-t border-[color:var(--admin-border)]">
           <div className="rounded-xl border border-[color:var(--admin-border)] bg-white/70 p-3 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[color:var(--admin-accent)] flex items-center justify-center text-white overflow-hidden">
+              <div className="w-14 h-14 rounded-2xl border border-[color:var(--admin-border)] bg-[color:var(--admin-surface-2)] flex items-center justify-center text-white overflow-hidden shrink-0">
                 {profile?.avatarUrl ? (
                   <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
@@ -845,6 +1330,7 @@ const AdminPortal = ({ setPage }) => {
                 <p className="text-xs text-[color:var(--admin-muted)] truncate">{user?.email}</p>
               </div>
             </div>
+            <p className="mt-2 text-[11px] uppercase tracking-[0.15em] text-[color:var(--admin-muted)]">Avatar preview</p>
           </div>
           <button
             onClick={handleLogout}
@@ -1029,7 +1515,7 @@ const AdminPortal = ({ setPage }) => {
                         <th className="px-6 py-4">Items / Products</th>
                         <th className="px-6 py-4">Total Price</th>
                         <th className="px-6 py-4">Status</th>
-                        <th className="px-6 py-4 text-center">Action</th>
+                        <th className="px-6 py-4 text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[color:var(--admin-border)] text-[color:var(--admin-muted)]">
@@ -1063,17 +1549,27 @@ const AdminPortal = ({ setPage }) => {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center justify-center">
-                              <select
-                                value={ord.status}
-                                onChange={(e) => handleUpdateOrderStatus(ord.id, e.target.value)}
-                                className="text-xs border border-[#DEE2E7] rounded p-1 bg-white outline-none cursor-pointer hover:border-[#8B96A5]"
-                              >
-                                <option value="Pending">Pending</option>
-                                <option value="Processing">Processing</option>
-                                <option value="Shipped">Shipped</option>
-                                <option value="Delivered">Delivered</option>
-                                <option value="Cancelled">Cancelled</option>
-                              </select>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openOrderDetailModal(ord, 'Active order')}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[color:var(--admin-border)] bg-white text-xs font-semibold text-[color:var(--admin-ink)] hover:bg-[color:var(--admin-surface-2)]"
+                                >
+                                  <Eye size={14} />
+                                  View full detail
+                                </button>
+                                <select
+                                  value={ord.status}
+                                  onChange={(e) => handleUpdateOrderStatus(ord.id, e.target.value)}
+                                  className="text-xs border border-[#DEE2E7] rounded p-1 bg-white outline-none cursor-pointer hover:border-[#8B96A5]"
+                                >
+                                  <option value="Pending">Pending</option>
+                                  <option value="Processing">Processing</option>
+                                  <option value="Shipped">Shipped</option>
+                                  <option value="Delivered">Delivered</option>
+                                  <option value="Cancelled">Cancelled</option>
+                                </select>
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -1109,6 +1605,7 @@ const AdminPortal = ({ setPage }) => {
                         <th className="px-6 py-4">Total Amount</th>
                         <th className="px-6 py-4">Completed Date</th>
                         <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4 text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[color:var(--admin-border)] text-[color:var(--admin-muted)]">
@@ -1128,6 +1625,16 @@ const AdminPortal = ({ setPage }) => {
                               <CheckCircle size={12} />
                               {hist.status}
                             </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <button
+                              type="button"
+                              onClick={() => openOrderDetailModal(hist, 'Order history')}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[color:var(--admin-border)] bg-white text-xs font-semibold text-[color:var(--admin-ink)] hover:bg-[color:var(--admin-surface-2)]"
+                            >
+                              <Eye size={14} />
+                              View full detail
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -1440,10 +1947,12 @@ const AdminPortal = ({ setPage }) => {
                     <label className="block text-sm font-semibold text-[#1C1C1C] mb-1.5">Price ($) *</label>
                     <input
                       type="number"
+                      min="0.01"
                       step="0.01"
+                      inputMode="decimal"
                       required
                       value={productForm.price}
-                      onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                      onChange={(e) => setProductForm({ ...productForm, price: sanitizeDecimalInput(e.target.value) })}
                       placeholder="e.g. 299.99"
                       className="w-full text-sm p-2.5 border border-[#DEE2E7] rounded-md outline-none bg-white focus:border-[#8B96A5]"
                     />
@@ -1453,9 +1962,11 @@ const AdminPortal = ({ setPage }) => {
                     <label className="block text-sm font-semibold text-[#1C1C1C] mb-1.5">Old Price ($) — Optional</label>
                     <input
                       type="number"
+                      min="0"
                       step="0.01"
+                      inputMode="decimal"
                       value={productForm.oldPrice}
-                      onChange={(e) => setProductForm({ ...productForm, oldPrice: e.target.value })}
+                      onChange={(e) => setProductForm({ ...productForm, oldPrice: sanitizeDecimalInput(e.target.value) })}
                       placeholder="e.g. 349.99"
                       className="w-full text-sm p-2.5 border border-[#DEE2E7] rounded-md outline-none bg-white focus:border-[#8B96A5]"
                     />
@@ -1465,9 +1976,12 @@ const AdminPortal = ({ setPage }) => {
                     <label className="block text-sm font-semibold text-[#1C1C1C] mb-1.5">Stock Count *</label>
                     <input
                       type="number"
+                      min="0"
+                      step="1"
+                      inputMode="numeric"
                       required
                       value={productForm.stock}
-                      onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
+                      onChange={(e) => setProductForm({ ...productForm, stock: sanitizeIntegerInput(e.target.value) })}
                       placeholder="10"
                       className="w-full text-sm p-2.5 border border-[#DEE2E7] rounded-md outline-none bg-white focus:border-[#8B96A5]"
                     />
@@ -1506,40 +2020,52 @@ const AdminPortal = ({ setPage }) => {
                     ></textarea>
                   </div>
 
-                  {/* Multiple Product Images Input Block */}
+                  {/* Product Images Upload */}
                   <div className="col-span-1 md:col-span-2 border-t border-[#DEE2E7] pt-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <label className="block text-sm font-bold text-[#1C1C1C]">Product Image URLs</label>
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div>
+                        <label className="block text-sm font-bold text-[#1C1C1C]">Product Images</label>
+                        <p className="text-xs text-[#8B96A5]">Upload one or more files. Images are compressed to WebP before upload.</p>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => addImageUrlInput(false)}
-                        className="flex items-center gap-1 text-xs font-bold text-[#0D6EFD] hover:underline"
+                        onClick={() => clearSelectedImages(false)}
+                        className="text-xs font-bold text-[#0D6EFD] hover:underline"
                       >
-                        <Plus size={14} /> Add URL Field
+                        Clear selected
                       </button>
                     </div>
 
-                    <div className="space-y-2">
-                      {productForm.imageUrls.map((url, idx) => (
-                        <div key={idx} className="flex gap-2">
-                          <input
-                            type="url"
-                            value={url}
-                            onChange={(e) => handleImageUrlChange(idx, e.target.value, false)}
-                            placeholder={`https://unsplash.com/... (Image URL #${idx + 1})`}
-                            className="flex-1 text-sm p-2 border border-[#DEE2E7] rounded outline-none focus:border-[#8B96A5]"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeImageUrlInput(idx, false)}
-                            className="p-2 border border-[#DEE2E7] hover:border-red-600 rounded text-red-600 hover:bg-red-50 flex items-center justify-center"
-                            disabled={productForm.imageUrls.length <= 1}
-                          >
-                            <Trash size={16} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                    <input
+                      key={imageInputKey}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => handleImageFilesChange(e.target.files, false)}
+                      className="block w-full text-sm text-[#505050] file:mr-4 file:rounded-full file:border-0 file:bg-[#0D6EFD] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#0b5ed7]"
+                    />
+
+                    {productForm.imagePreviews.length > 0 && (
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {productForm.imagePreviews.map((preview, idx) => (
+                          <div key={preview} className="rounded-xl border border-[#DEE2E7] bg-white p-3">
+                            <div className="aspect-square overflow-hidden rounded-lg bg-[#F7F7F7] flex items-center justify-center">
+                              <img src={preview} alt={`Selected preview ${idx + 1}`} className="h-full w-full object-contain" />
+                            </div>
+                            <div className="mt-2 flex items-center justify-between gap-2">
+                              <span className="truncate text-xs text-[#505050]">{productForm.imageFiles[idx]?.name || `Image ${idx + 1}`}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeSelectedImage(idx, false)}
+                                className="inline-flex items-center justify-center rounded-full border border-[#DEE2E7] p-1 text-red-600 hover:bg-red-50"
+                              >
+                                <Trash size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1590,22 +2116,37 @@ const AdminPortal = ({ setPage }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-[#1C1C1C] mb-1.5">Avatar Image URL</label>
+                  <label className="block text-sm font-semibold text-[#1C1C1C] mb-1.5">Avatar Image</label>
                   <input
-                    type="url"
-                    value={profileForm.avatarUrl}
-                    onChange={(e) => setProfileForm({ ...profileForm, avatarUrl: e.target.value })}
-                    placeholder="https://example.com/avatar.jpg"
-                    className="w-full text-sm p-2.5 border border-[#DEE2E7] rounded-md outline-none bg-white focus:border-[#8B96A5]"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleProfileAvatarChange(e.target.files?.[0])}
+                    className="block w-full text-sm text-[#505050] file:mr-4 file:rounded-full file:border-0 file:bg-[#0D6EFD] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#0b5ed7]"
                   />
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={clearProfileAvatarSelection}
+                      className="text-xs font-bold text-[#0D6EFD] hover:underline"
+                    >
+                      Reset avatar selection
+                    </button>
+                    {profileForm.avatarFile && (
+                      <span className="text-xs text-[#8B96A5]">Selected: {profileForm.avatarFile.name}</span>
+                    )}
+                  </div>
                 </div>
 
-                {profileForm.avatarUrl && (
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-md border border-[#DEE2E7] w-fit">
-                    <span className="text-xs text-[#505050] font-medium">Avatar Preview:</span>
-                    <img src={profileForm.avatarUrl} alt="Preview" className="w-12 h-12 rounded-full border object-cover" />
-                  </div>
-                )}
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-md border border-[#DEE2E7] w-full sm:w-fit">
+                  <span className="text-xs text-[#505050] font-medium">Avatar Preview:</span>
+                  {profileForm.avatarPreview ? (
+                    <img src={profileForm.avatarPreview} alt="Preview" className="w-16 h-16 rounded-2xl border object-cover" />
+                  ) : (
+                    <div className="w-16 h-16 rounded-2xl border border-dashed border-[#DEE2E7] flex items-center justify-center text-[#8B96A5] text-xs text-center px-2">
+                      No image selected
+                    </div>
+                  )}
+                </div>
 
                 <div className="border-t border-[color:var(--admin-border)] pt-5 flex justify-end">
                   <button
@@ -1621,15 +2162,25 @@ const AdminPortal = ({ setPage }) => {
               <form onSubmit={handleUpdatePasswordSubmit} className="space-y-5">
                 <div>
                   <label className="block text-sm font-semibold text-[#1C1C1C] mb-1.5">New Password *</label>
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password (min 6 characters)"
-                    className="w-full text-sm p-2.5 border border-[#DEE2E7] rounded-md outline-none bg-white focus:border-[#8B96A5]"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password (min 6 characters)"
+                      className="w-full text-sm p-2.5 pr-11 border border-[#DEE2E7] rounded-md outline-none bg-white focus:border-[#8B96A5]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword((current) => !current)}
+                      aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8B96A5] transition hover:text-[#1C1C1C]"
+                    >
+                      {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="border-t border-[color:var(--admin-border)] pt-5 flex justify-end">
@@ -1653,7 +2204,7 @@ const AdminPortal = ({ setPage }) => {
           <div className="admin-card rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[color:var(--admin-border)] bg-white/70">
               <h3 className="admin-title text-base font-semibold text-[color:var(--admin-ink)]">Edit Product Details</h3>
-              <button onClick={() => setEditingProduct(null)} className="text-[#8B96A5] hover:text-[#1C1C1C] p-1 rounded-md">
+              <button onClick={closeEditModal} className="text-[#8B96A5] hover:text-[#1C1C1C] p-1 rounded-md">
                 <X size={20} />
               </button>
             </div>
@@ -1699,10 +2250,12 @@ const AdminPortal = ({ setPage }) => {
                   <label className="block text-sm font-semibold text-[#1C1C1C] mb-1.5">Price ($) *</label>
                   <input
                     type="number"
+                    min="0.01"
                     step="0.01"
+                    inputMode="decimal"
                     required
                     value={editingProduct.price}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, price: sanitizeDecimalInput(e.target.value) })}
                     className="w-full text-sm p-2.5 border border-[#DEE2E7] rounded-md outline-none focus:border-[#8B96A5]"
                   />
                 </div>
@@ -1711,9 +2264,11 @@ const AdminPortal = ({ setPage }) => {
                   <label className="block text-sm font-semibold text-[#1C1C1C] mb-1.5">Old Price ($) — Optional</label>
                   <input
                     type="number"
+                    min="0"
                     step="0.01"
+                    inputMode="decimal"
                     value={editingProduct.oldPrice}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, oldPrice: e.target.value })}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, oldPrice: sanitizeDecimalInput(e.target.value) })}
                     className="w-full text-sm p-2.5 border border-[#DEE2E7] rounded-md outline-none focus:border-[#8B96A5]"
                   />
                 </div>
@@ -1722,9 +2277,12 @@ const AdminPortal = ({ setPage }) => {
                   <label className="block text-sm font-semibold text-[#1C1C1C] mb-1.5">Stock Count *</label>
                   <input
                     type="number"
+                    min="0"
+                    step="1"
+                    inputMode="numeric"
                     required
                     value={editingProduct.stock}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, stock: sanitizeIntegerInput(e.target.value) })}
                     className="w-full text-sm p-2.5 border border-[#DEE2E7] rounded-md outline-none focus:border-[#8B96A5]"
                   />
                 </div>
@@ -1762,38 +2320,72 @@ const AdminPortal = ({ setPage }) => {
 
                 {/* Multiple Images Edit */}
                 <div className="col-span-1 md:col-span-2 border-t border-[#DEE2E7] pt-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="block text-sm font-bold text-[#1C1C1C]">Product Image URLs</label>
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <label className="block text-sm font-bold text-[#1C1C1C]">Product Images</label>
+                      <p className="text-xs text-[#8B96A5]">Uploading new files will replace the existing images and delete the old storage objects.</p>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => addImageUrlInput(true)}
-                      className="flex items-center gap-1 text-xs font-bold text-[#0D6EFD] hover:underline"
+                      onClick={() => clearSelectedImages(true)}
+                      className="text-xs font-bold text-[#0D6EFD] hover:underline"
                     >
-                      <Plus size={14} /> Add URL Field
+                      Clear selected
                     </button>
                   </div>
-
-                  <div className="space-y-2">
-                    {editingProduct.imageUrls.map((url, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <input
-                          type="url"
-                          value={url}
-                          onChange={(e) => handleImageUrlChange(idx, e.target.value, true)}
-                          placeholder={`https://unsplash.com/... (Image URL #${idx + 1})`}
-                          className="flex-1 text-sm p-2 border border-[#DEE2E7] rounded outline-none focus:border-[#8B96A5]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeImageUrlInput(idx, true)}
-                          className="p-2 border border-[#DEE2E7] hover:border-red-600 rounded text-red-600 hover:bg-red-50 flex items-center justify-center"
-                          disabled={editingProduct.imageUrls.length <= 1}
-                        >
-                          <Trash size={16} />
-                        </button>
+                      onClick={() => {
+                        clearSelectedImages(false);
+                        setActiveTab('products');
+                      }}
+                  {editingProduct.imageUrls.length > 0 && (
+                    <div className="mb-4">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#8B96A5]">Current images</p>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {editingProduct.imageUrls.map((url, idx) => (
+                          <div key={`${url}-${idx}`} className="rounded-xl border border-[#DEE2E7] bg-white p-3">
+                            <div className="aspect-square overflow-hidden rounded-lg bg-[#F7F7F7] flex items-center justify-center">
+                              <img src={url} alt={`Current product ${idx + 1}`} className="h-full w-full object-contain" />
+                            </div>
+                            <p className="mt-2 truncate text-xs text-[#505050]">Stored image {idx + 1}</p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
+
+                  <input
+                    key={editImageInputKey}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleImageFilesChange(e.target.files, true)}
+                    className="block w-full text-sm text-[#505050] file:mr-4 file:rounded-full file:border-0 file:bg-[#0D6EFD] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#0b5ed7]"
+                  />
+
+                  {editingProduct.newImagePreviews.length > 0 && (
+                    <div className="mt-4">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#8B96A5]">New images to save</p>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {editingProduct.newImagePreviews.map((preview, idx) => (
+                          <div key={preview} className="rounded-xl border border-[#DEE2E7] bg-white p-3">
+                            <div className="aspect-square overflow-hidden rounded-lg bg-[#F7F7F7] flex items-center justify-center">
+                              <img src={preview} alt={`New preview ${idx + 1}`} className="h-full w-full object-contain" />
+                            </div>
+                            <div className="mt-2 flex items-center justify-between gap-2">
+                              <span className="truncate text-xs text-[#505050]">{editingProduct.imageFiles[idx]?.name || `Image ${idx + 1}`}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeSelectedImage(idx, true)}
+                                className="inline-flex items-center justify-center rounded-full border border-[#DEE2E7] p-1 text-red-600 hover:bg-red-50"
+                              >
+                                <Trash size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </form>
@@ -1801,7 +2393,7 @@ const AdminPortal = ({ setPage }) => {
             <div className="px-6 py-4 border-t border-[color:var(--admin-border)] bg-white/70 flex justify-end gap-3 flex-shrink-0">
               <button
                 type="button"
-                onClick={() => setEditingProduct(null)}
+                onClick={closeEditModal}
                 className="text-sm font-semibold px-4 py-2 border border-[color:var(--admin-border)] text-[color:var(--admin-ink)] hover:bg-[color:var(--admin-surface-2)] rounded-xl"
               >
                 Cancel
@@ -1819,7 +2411,7 @@ const AdminPortal = ({ setPage }) => {
 
       {modalState.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="admin-card w-full max-w-md rounded-2xl">
+          <div className={`admin-card w-full rounded-2xl ${modalState.dialogSize === 'xl' ? 'max-w-5xl' : 'max-w-md'}`}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-[color:var(--admin-border)]">
               <h3 className={`text-sm font-bold ${getModalAccentClass(modalState.type)}`}>
                 {modalState.title}
@@ -1828,7 +2420,7 @@ const AdminPortal = ({ setPage }) => {
                 <X size={18} />
               </button>
             </div>
-            <div className="px-5 py-4 text-sm text-dark-light">
+            <div className={`px-5 py-4 text-sm text-dark-light ${modalState.dialogSize === 'xl' ? 'max-h-[78vh] overflow-y-auto' : ''}`}>
               {modalState.message}
             </div>
             <div className="px-5 py-4 border-t border-[color:var(--admin-border)] flex justify-end gap-2">

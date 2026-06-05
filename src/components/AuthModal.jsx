@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { X, Lock, Mail, User, AlertCircle } from 'lucide-react';
+import { X, Lock, Mail, User, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function AuthModal({ isOpen, onClose }) {
   if (!isOpen) return null;
@@ -8,6 +8,7 @@ export default function AuthModal({ isOpen, onClose }) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -161,13 +162,21 @@ export default function AuthModal({ isOpen, onClose }) {
                 <Lock size={18} />
               </span>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-md border border-gray-300 py-2 pl-10 pr-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full rounded-md border border-gray-300 py-2 pl-10 pr-11 outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
