@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { LogOut, Save, Edit2, ShieldAlert } from 'lucide-react';
 
 const Profile = ({ setPage, onAuthRequired }) => {
-  const { user, profile, refetchProfile, signOut, getToken } = useAuth();
+  const { user, profile, loading: authLoading, refetchProfile, signOut, getToken } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [fullName, setFullName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -11,15 +11,17 @@ const Profile = ({ setPage, onAuthRequired }) => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!user) {
+    // If user is not authenticated, trigger auth modal and navigate home
+    if (!user && !authLoading) {
       onAuthRequired();
       setPage('home');
       return;
     }
+    // Set full name once profile is loaded
     if (profile) {
       setFullName(profile.fullName || '');
     }
-  }, [user, profile]);
+  }, [user, profile, authLoading, onAuthRequired, setPage]);
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
@@ -60,10 +62,14 @@ const Profile = ({ setPage, onAuthRequired }) => {
     setPage('home');
   };
 
+  // Show loading spinner while auth is being resolved or profile is loading
   if (!user || !profile) {
     return (
-      <div className="container py-8 text-center">
-        <p className="text-gray-500">Redirecting to login...</p>
+      <div className="container py-8 min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-8 h-8 border-4 border-[#5B7CFF] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-[#8B96A5]">Loading profile...</p>
+        </div>
       </div>
     );
   }
