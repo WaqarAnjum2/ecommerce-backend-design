@@ -21,7 +21,7 @@ const Profile = ({ setPage, onAuthRequired }) => {
     if (profile) {
       setFullName(profile.fullName || '');
     }
-  }, [user, profile, authLoading, onAuthRequired, setPage]);
+  }, [user, profile, authLoading]);
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();

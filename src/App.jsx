@@ -32,6 +32,8 @@ function App() {
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [homeItems, setHomeItems] = useState([]);
+  const [electronicsItems, setElectronicsItems] = useState([]);
   const { user, profile, loading: authLoading } = useAuth();
 
   // Automatically redirect to admin portal when an admin logs in
@@ -43,25 +45,17 @@ function App() {
     }
   }, [profile]);
 
-  // Gate rendering until auth is resolved to prevent landing page flash
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[color:var(--site-bg)]">
-        <div className="text-center">
-          <div className="inline-block w-8 h-8 border-4 border-[#5B7CFF] border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-[#8B96A5]">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Dynamic category product data from API
-  const [homeItems, setHomeItems] = useState([]);
-  const [electronicsItems, setElectronicsItems] = useState([]);
-
   useEffect(() => {
+    const categoriesAbortController = new AbortController();
+    
     // Fetch Home & Outdoor category products
-    fetch('/api/products?category=home-outdoor&limit=8')
+    fetch('/api/products?category=home-outdoor&limit=8', {
+      signal: categoriesAbortController.signal,
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      },
+    })
       .then((r) => r.json())
       .then((data) => {
         const items = (data.products || []).map((p) => ({
@@ -72,10 +66,20 @@ function App() {
         }));
         setHomeItems(items);
       })
-      .catch((err) => console.error('Failed to load home items:', err));
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.error('Failed to load home items:', err);
+        }
+      });
 
     // Fetch Consumer Electronics category products
-    fetch('/api/products?category=electronics&limit=8')
+    fetch('/api/products?category=electronics&limit=8', {
+      signal: categoriesAbortController.signal,
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      },
+    })
       .then((r) => r.json())
       .then((data) => {
         const items = (data.products || []).map((p) => ({
@@ -86,7 +90,13 @@ function App() {
         }));
         setElectronicsItems(items);
       })
-      .catch((err) => console.error('Failed to load electronics items:', err));
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.error('Failed to load electronics items:', err);
+        }
+      });
+    
+    return () => categoriesAbortController.abort();
   }, []);
 
   // Navigate to product details with a product ID
@@ -172,6 +182,18 @@ function App() {
 
   if (currentPage === 'admin') {
     return <AdminPortal setPage={setCurrentPage} />;
+  }
+
+  // Gate rendering until auth is resolved to prevent landing page flash
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[color:var(--site-bg)]">
+        <div className="text-center">
+          <div className="inline-block w-8 h-8 border-4 border-[#5B7CFF] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-[#8B96A5]">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

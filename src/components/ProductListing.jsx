@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronRight, Grid, List, ChevronDown, Star, Heart, X } from 'lucide-react';
 import ProductCardCarousel from './ProductCardCarousel';
 import { getFavorites, toggleFavorite } from '../lib/favorites';
@@ -9,6 +9,7 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([]);
+  const abortControllerRef = useRef(null);
 
   // Filter state
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -37,9 +38,18 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
     return Number.isFinite(parsed) ? parsed : null;
   };
 
-  // Build query and fetch products
+  // Build query and fetch products with AbortController for cleanup
   const fetchProducts = useCallback((overridePage) => {
     setLoading(true);
+    
+    // Cancel previous request if still pending
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
     const params = new URLSearchParams();
     const currentPage = overridePage ?? page;
     params.set('page', String(currentPage));
@@ -62,18 +72,35 @@ const ProductListing = ({ setPage, onProductClick, searchQuery, setSearchQuery }
     if (ratingFilter !== null) params.set('rating', String(ratingFilter));
     if (sortBy) params.set('sort', sortBy);
 
-    fetch(`/api/products?${params.toString()}`)
+    fetch(`/api/products?${params.toString()}`, {
+      signal: abortControllerRef.current.signal,
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      },
+    })
       .then((r) => r.json())
       .then((data) => {
         setProducts(data.products || []);
         setPagination(data.pagination || { page: 1, limit: 10, total: 0, totalPages: 1 });
       })
-      .catch((err) => console.error('Failed to fetch products:', err))
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.error('Failed to fetch products:', err);
+        }
+      })
       .finally(() => setLoading(false));
   }, [page, selectedCategory, searchQuery, selectedBrands, minPrice, maxPrice, selectedRatings, sortBy]);
 
   useEffect(() => {
     fetchProducts();
+    
+    // Cleanup: abort request on unmount
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [fetchProducts]);
 
   useEffect(() => {

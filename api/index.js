@@ -65,7 +65,10 @@ if (effectiveOrigins.length > 0) {
 app.use(cors(corsOptions));
 
 // ── Routes ─────────────────────────────────────────────────────
-const publicRateLimit = rateLimit({ keyPrefix: 'ratelimit:public', windowSeconds: 60, max: 60 });
+// Skip rate limiting in development to prevent issues with React StrictMode double renders
+const publicRateLimit = process.env.NODE_ENV === 'production' 
+  ? rateLimit({ keyPrefix: 'ratelimit:public', windowSeconds: 60, max: 60 })
+  : (req, res, next) => next();
 
 apiRouter.use('/categories', publicRateLimit, categoriesRouter);
 apiRouter.use('/products', publicRateLimit, productsRouter);
