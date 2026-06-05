@@ -32,7 +32,7 @@ function App() {
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
 
   // Automatically redirect to admin portal when an admin logs in
   useEffect(() => {
@@ -42,6 +42,18 @@ function App() {
       setCurrentPage('home');
     }
   }, [profile]);
+
+  // Gate rendering until auth is resolved to prevent landing page flash
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[color:var(--site-bg)]">
+        <div className="text-center">
+          <div className="inline-block w-8 h-8 border-4 border-[#5B7CFF] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-[#8B96A5]">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Dynamic category product data from API
   const [homeItems, setHomeItems] = useState([]);

@@ -657,7 +657,12 @@ const AdminPortal = ({ setPage }) => {
       if (prodSearch) {
         params.set('search', prodSearch);
       }
-      const response = await fetch(`/api/products?${params.toString()}`);
+      const response = await fetch(`/api/products?${params.toString()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setProducts(data.products || []);
@@ -864,9 +869,11 @@ const AdminPortal = ({ setPage }) => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${getToken()}`
+              'Authorization': `Bearer ${getToken()}`,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            cache: 'no-store',
           });
 
           if (response.ok) {
@@ -927,8 +934,10 @@ const AdminPortal = ({ setPage }) => {
           const response = await fetch(`/api/products/${productId}`, {
             method: 'DELETE',
             headers: {
-              'Authorization': `Bearer ${getToken()}`
-            }
+              'Authorization': `Bearer ${getToken()}`,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+            },
+            cache: 'no-store',
           });
           if (response.ok) {
             openInfo({
@@ -1022,9 +1031,11 @@ const AdminPortal = ({ setPage }) => {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${getToken()}`
+              'Authorization': `Bearer ${getToken()}`,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            cache: 'no-store',
           });
 
           if (response.ok) {

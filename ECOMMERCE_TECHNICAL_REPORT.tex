@@ -1,0 +1,2455 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf-8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{tocloft}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{shapes, arrows, positioning}
+
+% Color definitions
+\definecolor{darkblue}{rgb}{0.0, 0.2, 0.4}
+\definecolor{lightblue}{rgb}{0.9, 0.95, 1.0}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+% Code listing style
+\lstset{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codepurple},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\small,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=4,
+    frame=single,
+    rulecolor=\color{black},
+    linewidth=\textwidth
+}
+
+% Header and Footer
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\textcolor{darkblue}{\textbf{E-Commerce Platform}}}
+\rhead{\textbf{Technical Report}}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{2pt}
+\renewcommand{\headrule}{\color{darkblue}\hrule width\headwidth height\headrulewidth \vskip-\headrulewidth}
+
+\title{
+    \vspace*{2cm}
+    {\Huge \textbf{\textcolor{darkblue}{E-Commerce Full-Stack Platform}}} \\
+    \vspace{0.5cm}
+    {\LARGE \textcolor{darkblue}{Technical Architecture Report}} \\
+    \vspace{1cm}
+    {\large A Comprehensive Documentation of the Complete System}
+}
+
+\author{
+    \vspace{1cm}
+    {\Large Technical Documentation} \\
+    Generated: \today
+}
+
+\date{}
+
+\begin{document}
+
+% Title Page
+\maketitle
+\thispagestyle{empty}
+\vspace*{3cm}
+
+\begin{center}
+    \Large \textbf{Repository Information}
+    
+    \vspace{1cm}
+    \fbox{%
+        \parbox{12cm}{%
+            \textbf{Repository Link:} \\
+            \texttt{[ADD YOUR GITHUB/GITLAB REPOSITORY URL HERE]} \\
+            \vspace{0.5cm}
+            \textbf{Project Name:} E-Commerce Frontend Design \\
+            \textbf{Version:} 1.0.0 \\
+            \textbf{Date:} \today
+        }%
+    }
+\end{center}
+
+\newpage
+
+% Table of Contents
+\clearpage
+\tableofcontents
+\clearpage
+
+% Executive Summary
+\chapter{Executive Summary}
+
+This comprehensive technical report documents a full-stack e-commerce platform built with modern web technologies. The system encompasses a complete architecture including a React-based frontend, Express.js API backend, PostgreSQL database with Prisma ORM, and Redis caching layer.
+
+\section{Key Features}
+
+\begin{itemize}
+    \item \textbf{User Authentication}: Secure JWT-based authentication via Supabase
+    \item \textbf{Product Management}: Complete catalog with filtering, searching, and recommendations
+    \item \textbf{Order Management}: Shopping cart, checkout, and order tracking
+    \item \textbf{User Profiles}: Customizable user profiles with address and payment information
+    \item \textbf{Inquiry System}: Business inquiry handling for B2B interactions
+    \item \textbf{Admin Portal}: Administrative dashboard for managing products, categories, and orders
+    \item \textbf{Caching Strategy}: Redis-based caching for improved performance
+    \item \textbf{Rate Limiting}: API rate limiting for security
+    \item \textbf{Deployment}: Vercel deployment with serverless architecture support
+\end{itemize}
+
+\section{Technology Stack Overview}
+
+\begin{itemize}
+    \item \textbf{Frontend}: React 18.2, Vite 4.4, Tailwind CSS 3.3
+    \item \textbf{Backend}: Express.js 5.2, Node.js
+    \item \textbf{Database}: PostgreSQL 15+ with Prisma ORM 7.8
+    \item \textbf{Caching}: Redis via Upstash
+    \item \textbf{Authentication}: Supabase Auth
+    \item \textbf{Security}: Helmet, CORS, JWT
+    \item \textbf{Deployment}: Vercel
+\end{itemize}
+
+\newpage
+
+% Chapter 1: Project Overview
+\chapter{Project Overview}
+
+\section{Introduction}
+
+The E-Commerce Full-Stack Platform is a modern, scalable web application designed to facilitate online commerce. It provides a complete solution for product browsing, ordering, user management, and administrative control.
+
+\section{Project Structure}
+
+\begin{lstlisting}[language=bash, caption=Project Directory Structure]
+ecommerce-frontend-design/
+├── api/                      # Backend API
+│   ├── index.js             # Express server entry point
+│   ├── config/              # Configuration files
+│   ├── middleware/          # Express middleware
+│   ├── routes/              # API route handlers
+│   ├── lib/                 # Utility libraries
+│   ├── prisma/              # Database schema & migrations
+│   └── package.json         # Backend dependencies
+├── src/                      # Frontend source
+│   ├── App.jsx              # Main React component
+│   ├── components/          # React components
+│   ├── context/             # React context (Auth, Cart)
+│   ├── lib/                 # Frontend utilities
+│   ├── assets/              # Images and resources
+│   └── main.jsx             # Entry point
+├── package.json             # Frontend dependencies
+├── vite.config.js           # Vite configuration
+├── tailwind.config.js       # Tailwind CSS configuration
+└── postcss.config.js        # PostCSS configuration
+\end{lstlisting}
+
+\section{Goals and Objectives}
+
+\begin{enumerate}
+    \item Provide a seamless e-commerce experience for end-users
+    \item Enable efficient product discovery through advanced filtering
+    \item Facilitate business-to-business inquiries
+    \item Provide administrators with comprehensive management tools
+    \item Ensure system reliability and performance through caching
+    \item Maintain security through proper authentication and authorization
+    \item Enable easy scalability and deployment
+\end{enumerate}
+
+\newpage
+
+% Chapter 2: Technology Stack
+\chapter{Technology Stack}
+
+\section{Frontend Technologies}
+
+\subsection{React 18.2}
+\textbf{React} is a JavaScript library for building user interfaces with component-based architecture.
+\begin{itemize}
+    \item \textbf{Version}: 18.2.0
+    \item \textbf{Purpose}: Dynamic UI rendering and state management
+    \item \textbf{Key Features}: Hooks, Context API, component composition
+\end{itemize}
+
+\subsection{Vite 4.4}
+\textbf{Vite} is a modern build tool that provides fast cold start and instant module hot replacement (HMR).
+\begin{itemize}
+    \item \textbf{Version}: 4.4.5
+    \item \textbf{Purpose}: Development server and production bundling
+    \item \textbf{Configuration}: Proxy setup for API calls to backend
+\end{itemize}
+
+\subsection{Tailwind CSS 3.3}
+\textbf{Tailwind CSS} is a utility-first CSS framework for rapid UI development.
+\begin{itemize}
+    \item \textbf{Version}: 3.3.3
+    \item \textbf{Purpose}: Responsive styling with predefined utility classes
+    \item \textbf{Features}: Custom color scheme, responsive breakpoints, component-based utilities
+\end{itemize}
+
+\subsection{Lucide React 0.263}
+\textbf{Lucide React} provides beautiful, customizable SVG icons as React components.
+\begin{itemize}
+    \item \textbf{Version}: 0.263.1
+    \item \textbf{Purpose}: Icon display throughout the application
+\end{itemize}
+
+\subsection{Supabase JavaScript Client 2.106}
+\textbf{Supabase Client} provides real-time and authentication capabilities.
+\begin{itemize}
+    \item \textbf{Version}: 2.106.1
+    \item \textbf{Purpose}: User authentication and session management
+\end{itemize}
+
+\section{Backend Technologies}
+
+\subsection{Express.js 5.2}
+\textbf{Express.js} is a minimal and flexible Node.js web application framework.
+\begin{itemize}
+    \item \textbf{Version}: 5.2.1
+    \item \textbf{Purpose}: RESTful API server
+    \item \textbf{Key Features}: Middleware support, routing, error handling
+\end{itemize}
+
+\subsection{Prisma 7.8}
+\textbf{Prisma} is a modern ORM for Node.js and TypeScript.
+\begin{itemize}
+    \item \textbf{Version}: 7.8.0
+    \item \textbf{Purpose}: Database access and manipulation
+    \item \textbf{Features}: Type-safe queries, schema-driven development, migrations
+    \item \textbf{Adapter}: PostgreSQL driver (@prisma/adapter-pg)
+\end{itemize}
+
+\subsection{PostgreSQL}
+\textbf{PostgreSQL} is a powerful, open-source relational database system.
+\begin{itemize}
+    \item \textbf{Purpose}: Primary data store
+    \item \textbf{Features}: ACID compliance, JSON support, full-text search
+    \item \textbf{Multi-schema}: Auth schema (Supabase) and Public schema (application data)
+\end{itemize}
+
+\subsection{Redis (Upstash)}
+\textbf{Redis} is an in-memory data store used for caching and rate limiting.
+\begin{itemize}
+    \item \textbf{Provider}: Upstash (serverless Redis)
+    \item \textbf{Version}: @upstash/redis 1.38.0
+    \item \textbf{Purpose}: Cache frequently accessed data, rate limiting
+\end{itemize}
+
+\subsection{JWT (JSON Web Tokens)}
+\textbf{JWT} is used for secure authentication and authorization.
+\begin{itemize}
+    \item \textbf{Library}: jsonwebtoken 9.0.3
+    \item \textbf{Purpose}: Token-based authentication
+    \item \textbf{Integration}: Supabase JWT Secret
+\end{itemize}
+
+\subsection{Security Libraries}
+
+\begin{itemize}
+    \item \textbf{Helmet 7.0}: Helps secure Express apps by setting various HTTP headers
+    \item \textbf{CORS 2.8}: Cross-Origin Resource Sharing middleware
+    \item \textbf{Node-pg 8.21}: PostgreSQL client for Node.js
+\end{itemize}
+
+\subsection{Deployment}
+\begin{itemize}
+    \item \textbf{Vercel}: Serverless deployment platform
+    \item \textbf{serverless-http}: Wraps Express app for serverless execution
+\end{itemize}
+
+\section{Development Dependencies}
+
+\begin{itemize}
+    \item \textbf{AutoPrefixer 10.4}: Parses CSS and adds vendor prefixes
+    \item \textbf{PostCSS 8.4}: Tool for transforming CSS
+    \item \textbf{dotenv 17.4}: Loads environment variables from .env files
+\end{itemize}
+
+\newpage
+
+% Chapter 3: Database Architecture
+\chapter{Database Architecture}
+
+\section{Database Overview}
+
+The application uses a multi-schema PostgreSQL database:
+
+\begin{itemize}
+    \item \textbf{auth schema}: Managed by Supabase for authentication
+    \item \textbf{public schema}: Application-specific data models
+\end{itemize}
+
+\section{Data Models}
+
+\subsection{Authentication Models (Supabase Auth Schema)}
+
+The authentication schema includes the following core models:
+
+\begin{longtable}{|p{3cm}|p{5cm}|p{4cm}|}
+\hline
+\textbf{Model} & \textbf{Description} & \textbf{Key Fields} \\
+\hline
+\texttt{audit\_log\_entries} & Audit trail for auth events & instance\_id, payload, ip\_address \\
+\hline
+\texttt{identities} & User identity providers & provider, user\_id, identity\_data \\
+\hline
+\texttt{mfa\_factors} & Multi-factor authentication & user\_id, factor\_type, status \\
+\hline
+\texttt{mfa\_challenges} & MFA challenge records & factor\_id, verified\_at \\
+\hline
+\texttt{sessions} & User sessions & user\_id, created\_at \\
+\hline
+\texttt{users} & User accounts & email, encrypted\_password \\
+\hline
+\end{longtable}
+
+\subsection{Application Data Models (Public Schema)}
+
+\subsubsection{Profile Model}
+
+\begin{lstlisting}[language=javascript, caption=Profile Model]
+model profile {
+  id          String     @id @db.Uuid
+  email       String?    
+  fullName    String?
+  avatarUrl   String?
+  isAdmin     Boolean    @default(false)
+  createdAt   DateTime   @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime   @updatedAt @db.Timestamptz(6)
+}
+\end{lstlisting}
+
+\textbf{Purpose}: Store user profile information
+\textbf{Key Relationships}: Links to Supabase auth users
+
+\subsubsection{Category Model}
+
+\begin{lstlisting}[language=javascript, caption=Category Model]
+model category {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  slug      String     @unique
+  desc      String?
+  image     String?
+  products  product[]
+  createdAt DateTime   @default(now()) @db.Timestamptz(6)
+}
+\end{lstlisting}
+
+\textbf{Purpose}: Organize products into categories
+\textbf{Relationships}: One-to-Many with products
+
+\subsubsection{Product Model}
+
+\begin{lstlisting}[language=javascript, caption=Product Model]
+model product {
+  id          String        @id @default(cuid())
+  categoryId  String
+  category    category      @relation(fields: [categoryId], references: [id])
+  title       String
+  desc        String?
+  price       Float
+  image       String?
+  rating      Float         @default(0)
+  stock       Int           @default(0)
+  orders      Int           @default(0)
+  brand       String?
+  orderItems  orderItem[]
+  createdAt   DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @db.Timestamptz(6)
+  
+  @@index([categoryId])
+}
+\end{lstlisting}
+
+\textbf{Purpose}: Store product information
+\textbf{Relationships}: Belongs to category, has many orderItems
+
+\subsubsection{Order Model}
+
+\begin{lstlisting}[language=javascript, caption=Order Model]
+model order {
+  id          String        @id @default(cuid())
+  userId      String        @db.Uuid
+  status      String        @default("pending")
+  totalPrice  Float
+  items       orderItem[]
+  createdAt   DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @db.Timestamptz(6)
+  
+  @@index([userId])
+}
+\end{lstlisting}
+
+\textbf{Purpose}: Store customer orders
+\textbf{Relationships}: Belongs to user (auth.users), has many orderItems
+
+\subsubsection{OrderItem Model}
+
+\begin{lstlisting}[language=javascript, caption=OrderItem Model]
+model orderItem {
+  id        String    @id @default(cuid())
+  orderId   String
+  order     order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   product   @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+  
+  @@index([orderId])
+  @@index([productId])
+}
+\end{lstlisting}
+
+\textbf{Purpose}: Link products to orders with quantity and price
+\textbf{Relationships}: Belongs to order and product
+
+\subsubsection{Inquiry Model (JSON File)}
+
+Inquiries are currently stored in \texttt{api/data/inquiries.json}:
+
+\begin{lstlisting}[language=javascript, caption=Inquiry Data Structure]
+{
+  id: String,              // Unique identifier
+  subject: String,         // Inquiry subject
+  details: String,         // Inquiry details
+  quantity: Number,        // Optional quantity
+  unit: String,           // Optional unit (e.g., "boxes", "pieces")
+  userId: String | null,  // Optional authenticated user ID
+  userEmail: String,      // User email
+  status: String,         // "new", "pending", "resolved"
+  createdAt: String,      // ISO timestamp
+  updatedAt: String       // ISO timestamp
+}
+\end{lstlisting}
+
+\textbf{Purpose}: Store B2B inquiry requests from users
+\textbf{Note}: Future migration to database table recommended
+
+\section{Database Relationships}
+
+\subsection{Entity Relationship Diagram}
+
+\begin{center}
+\begin{tikzpicture}[
+  entity/.style={rectangle, draw, minimum width=2cm, minimum height=1cm},
+  relation/.style={-}
+]
+
+\node[entity] (user) at (0, 4) {User\\(auth.users)};
+\node[entity] (profile) at (2, 4) {Profile};
+\node[entity] (order) at (0, 2) {Order};
+\node[entity] (orderitem) at (2, 2) {OrderItem};
+\node[entity] (product) at (4, 2) {Product};
+\node[entity] (category) at (6, 2) {Category};
+
+\draw [relation] (user) -- node[above]{1:1} (profile);
+\draw [relation] (user) -- node[above]{1:N} (order);
+\draw [relation] (order) -- node[above]{1:N} (orderitem);
+\draw [relation] (orderitem) -- node[above]{N:1} (product);
+\draw [relation] (product) -- node[above]{N:1} (category);
+
+\end{tikzpicture}
+\end{center}
+
+\newpage
+
+% Chapter 4: Backend Architecture and API
+\chapter{Backend Architecture and API}
+
+\section{Backend Overview}
+
+The backend is built with Express.js and deployed as a serverless function on Vercel. It provides RESTful API endpoints for the frontend to interact with the database.
+
+\section{Server Architecture}
+
+\subsection{Entry Point (api/index.js)}
+
+The main Express server includes:
+
+\begin{itemize}
+    \item \textbf{Middleware Setup}: JSON parsing, logging, security headers
+    \item \textbf{CORS Configuration}: Dynamic origin validation
+    \item \textbf{Route Registration}: All API routes mounted on \texttt{/api} prefix
+    \item \textbf{Rate Limiting}: Global rate limiter for public endpoints
+    \item \textbf{Health Check}: Diagnostics endpoint
+    \item \textbf{Serverless Wrapper}: Wrapped with serverless-http for Vercel
+\end{itemize}
+
+\subsection{Configuration (api/config/env.js)}
+
+Environment variables are loaded from:
+\begin{itemize}
+    \item \texttt{.env} (root directory)
+    \item \texttt{api/.env} (API-specific overrides)
+\end{itemize}
+
+\textbf{Key Variables}:
+\begin{itemize}
+    \item \texttt{DATABASE\_URL}: PostgreSQL connection string
+    \item \texttt{SUPABASE\_URL}: Supabase instance URL
+    \item \texttt{SUPABASE\_ANON\_KEY}: Public Supabase key
+    \item \texttt{SUPABASE\_JWT\_SECRET}: JWT signing secret
+    \item \texttt{UPSTASH\_REDIS\_REST\_URL}: Redis connection URL
+    \item \texttt{UPSTASH\_REDIS\_REST\_TOKEN}: Redis authentication
+    \item \texttt{VERCEL\_URL}: Deployment URL for CORS
+    \item \texttt{ALLOWED\_ORIGINS}: Comma-separated allowed origins
+\end{itemize}
+
+\section{Middleware}
+
+\subsection{Authentication Middleware (api/middleware/auth.js)}
+
+\textbf{Functionality}:
+\begin{itemize}
+    \item \texttt{verifyToken}: Validates JWT tokens from Supabase
+    \item \texttt{requireAdmin}: Ensures user is admin
+    \item \texttt{optionalVerifyToken}: Optional authentication
+\end{itemize}
+
+\textbf{Token Verification Flow}:
+\begin{enumerate}
+    \item Extract JWT from Authorization header (Bearer token)
+    \item Verify signature using Supabase JWKS or secret
+    \item Extract user claims and attach to req.user
+    \item Check token expiration and validity
+\end{enumerate}
+
+\subsection{Caching Middleware (api/middleware/cache.js)}
+
+\textbf{Components}:
+\begin{itemize}
+    \item \texttt{cacheMiddleware}: Checks Redis for cached data
+    \item \texttt{storeInCache}: Stores response in Redis with TTL
+    \item \texttt{invalidateCache}: Removes cached data
+    \item \texttt{noCacheHeaders}: Sets no-cache headers for protected routes
+\end{itemize}
+
+\textbf{Cache Strategy}:
+\begin{itemize}
+    \item Public data (products, categories): 1-24 hours TTL
+    \item User-specific data (orders, profiles): No caching
+    \item Cache key: Built from route + query parameters + request ID
+    \item Fallback: If Redis unavailable, bypasses caching
+\end{itemize}
+
+\subsection{Rate Limiting Middleware (api/middleware/rateLimit.js)}
+
+\textbf{Implementation}:
+\begin{itemize}
+    \item Uses Redis for distributed rate limiting
+    \item Key prefix system for different endpoints
+    \item Configurable window (seconds) and maximum requests
+    \item Default: 60 requests per 60 seconds for public endpoints
+    \item Auth endpoints: 5 requests per 60 seconds
+\end{itemize}
+
+\section{API Routes and Endpoints}
+
+\subsection{Authentication Routes (api/routes/auth.js)}
+
+\begin{longtable}{|p{2cm}|p{2.5cm}|p{2.5cm}|p{3cm}|}
+\hline
+\textbf{Method} & \textbf{Endpoint} & \textbf{Purpose} & \textbf{Rate Limit} \\
+\hline
+POST & /api/auth/login & User login & 5/min \\
+\hline
+POST & /api/auth/register & New user registration & 5/min \\
+\hline
+\end{longtable}
+
+\textbf{Login Endpoint}:
+\begin{lstlisting}[language=javascript, caption=Login Request/Response]
+// Request
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+
+// Response (Success)
+{
+  "access_token": "eyJhbGc...",
+  "refresh_token": "...",
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com"
+  }
+}
+\end{lstlisting}
+
+\textbf{Register Endpoint}:
+\begin{lstlisting}[language=javascript, caption=Register Request/Response]
+// Request
+POST /api/auth/register
+Content-Type: application/json
+
+{
+  "email": "newuser@example.com",
+  "password": "password123",
+  "fullName": "John Doe"
+}
+
+// Response (Success)
+{
+  "access_token": "eyJhbGc...",
+  "refresh_token": "...",
+  "user": { ... }
+}
+\end{lstlisting}
+
+\subsection{Products Routes (api/routes/products.js)}
+
+\begin{longtable}{|p{2cm}|p{3cm}|p{3cm}|p{2.5cm}|}
+\hline
+\textbf{Method} & \textbf{Endpoint} & \textbf{Purpose} & \textbf{Cache} \\
+\hline
+GET & /api/products & List products with filters & 1 hour \\
+\hline
+GET & /api/products/:id & Get product details & 1 hour \\
+\hline
+POST & /api/products & Create product (admin) & No cache \\
+\hline
+PUT & /api/products/:id & Update product (admin) & No cache \\
+\hline
+DELETE & /api/products/:id & Delete product (admin) & No cache \\
+\hline
+\end{longtable}
+
+\textbf{Query Parameters for GET /api/products}:
+\begin{lstlisting}[language=javascript, caption=Product Filtering Parameters]
+GET /api/products?category=electronics&search=laptop&minPrice=500&maxPrice=2000&rating=4&sort=price_asc&page=1&limit=10
+
+Parameters:
+- category: Category slug or UUID
+- search: Search in title, description, brand
+- minPrice: Minimum price filter
+- maxPrice: Maximum price filter
+- rating: Minimum rating filter
+- brand: Brand filter (comma-separated)
+- sort: price_asc, price_desc, rating, orders_desc
+- page: Pagination page (default: 1)
+- limit: Items per page (max: 50, default: 10)
+\end{lstlisting}
+
+\subsection{Categories Routes (api/routes/categories.js)}
+
+\begin{longtable}{|p{2cm}|p{2.5cm}|p{3cm}|p{2.5cm}|}
+\hline
+\textbf{Method} & \textbf{Endpoint} & \textbf{Purpose} & \textbf{Cache} \\
+\hline
+GET & /api/categories & List all categories & 24 hours \\
+\hline
+\end{longtable}
+
+\subsection{Orders Routes (api/routes/orders.js)}
+
+\begin{longtable}{|p{2cm}|p{2.5cm}|p{3cm}|p{2.5cm}|}
+\hline
+\textbf{Method} & \textbf{Endpoint} & \textbf{Purpose} & \textbf{Auth} \\
+\hline
+GET & /api/orders & List user orders & Required \\
+\hline
+POST & /api/orders & Create new order & Required \\
+\hline
+GET & /api/orders/:id & Get order details & Required \\
+\hline
+PUT & /api/orders/:id & Update order status & Required \\
+\hline
+\end{longtable}
+
+\textbf{Create Order Example}:
+\begin{lstlisting}[language=javascript, caption=Order Creation]
+// Request
+POST /api/orders
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "items": [
+    { "productId": "uuid1", "quantity": 2 },
+    { "productId": "uuid2", "quantity": 1 }
+  ]
+}
+
+// Response
+{
+  "id": "order-uuid",
+  "userId": "user-uuid",
+  "status": "pending",
+  "totalPrice": 599.98,
+  "items": [ ... ],
+  "createdAt": "2024-01-15T10:30:00Z"
+}
+\end{lstlisting}
+
+\subsection{Inquiries Routes (api/routes/inquiries.js)}
+
+\begin{longtable}{|p{2cm}|p{2.5cm}|p{3cm}|p{2.5cm}|}
+\hline
+\textbf{Method} & \textbf{Endpoint} & \textbf{Purpose} & \textbf{Auth} \\
+\hline
+POST & /api/inquiries & Submit inquiry & Optional \\
+\hline
+GET & /api/inquiries & List inquiries (admin) & Required \\
+\hline
+PUT & /api/inquiries/:id & Update inquiry status & Admin \\
+\hline
+\end{longtable}
+
+\subsection{Profiles Routes (api/routes/profiles.js)}
+
+\begin{longtable}{|p{2cm}|p{2.5cm}|p{3cm}|p{2.5cm}|}
+\hline
+\textbf{Method} & \textbf{Endpoint} & \textbf{Purpose} & \textbf{Auth} \\
+\hline
+GET & /api/profiles/me & Get current user profile & Required \\
+\hline
+PUT & /api/profiles/me & Update profile & Required \\
+\hline
+\end{longtable}
+
+\subsection{Health Check}
+
+\begin{lstlisting}[language=javascript, caption=Health Check Endpoint]
+GET /api/health
+
+Response:
+{
+  "status": "ok",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "environment": "production"
+}
+\end{lstlisting}
+
+\section{Database Access Layer}
+
+\subsection{Prisma Client (api/lib/prisma.js)}
+
+\textbf{Purpose}: Singleton instance of Prisma Client for database queries
+
+\begin{lstlisting}[language=javascript, caption=Prisma Client Usage]
+// Example query
+const product = await prisma.product.findUnique({
+  where: { id: productId },
+  include: { category: true }
+});
+
+// Example mutation
+const order = await prisma.order.create({
+  data: {
+    userId: userId,
+    totalPrice: totalPrice,
+    items: {
+      create: itemsData
+    }
+  }
+});
+\end{lstlisting}
+
+\subsection{Redis Client (api/lib/redis.js)}
+
+\textbf{Purpose}: Upstash Redis client for caching and rate limiting
+
+\begin{lstlisting}[language=javascript, caption=Redis Client Usage]
+// Set cache
+await redis.set(key, JSON.stringify(data), { ex: 3600 });
+
+// Get cache
+const cached = await redis.get(key);
+
+// Delete cache
+await redis.del(key);
+
+// Increment counter
+await redis.incr(counterKey);
+\end{lstlisting}
+
+\newpage
+
+% Chapter 5: Frontend Architecture
+\chapter{Frontend Architecture}
+
+\section{Frontend Overview}
+
+The frontend is a single-page application (SPA) built with React, providing a responsive and interactive user interface. It communicates with the backend through RESTful API calls.
+
+\section{Application Structure}
+
+\subsection{Main Application Component (src/App.jsx)}
+
+\textbf{Responsibilities}:
+\begin{itemize}
+    \item Route/page management using state
+    \item User authentication context
+    \item Dynamic data fetching from API
+    \item Page rendering based on current view
+\end{itemize}
+
+\textbf{Available Pages}:
+\begin{itemize}
+    \item \textbf{home}: Homepage with featured products
+    \item \textbf{listing}: Product listing with filters and search
+    \item \textbf{details}: Product detail page
+    \item \textbf{cart}: Shopping cart
+    \item \textbf{profile}: User profile management
+    \item \textbf{messages}: User messages/inquiries
+    \item \textbf{orders}: Order history
+    \item \textbf{favorites}: Saved/favorite products
+    \item \textbf{myinquiries}: User's submitted inquiries
+    \item \textbf{shipping}: Shipping address management
+    \item \textbf{payment}: Payment methods
+    \item \textbf{admin}: Administrative dashboard
+\end{itemize}
+
+\section{React Components}
+
+\subsection{Core Components}
+
+\begin{longtable}{|p{3cm}|p{5cm}|}
+\hline
+\textbf{Component} & \textbf{Purpose} \\
+\hline
+Header & Navigation bar with search, cart, and user menu \\
+\hline
+Hero & Hero banner with call-to-action \\
+\hline
+Footer & Footer with links and information \\
+\hline
+AuthModal & Login/registration modal dialog \\
+\hline
+\end{longtable}
+
+\subsection{Product Components}
+
+\begin{longtable}{|p{3cm}|p{5cm}|}
+\hline
+\textbf{Component} & \textbf{Purpose} \\
+\hline
+ProductListing & Browse and filter products \\
+\hline
+ProductDetails & Detailed product information \\
+\hline
+ProductCardCarousel & Horizontal product carousel \\
+\hline
+RecommendedItems & Recommended products section \\
+\hline
+Deals & Special deals/promotions section \\
+\hline
+CategorySection & Category-specific product display \\
+\hline
+\end{longtable}
+
+\subsection{User Components}
+
+\begin{longtable}{|p{3cm}|p{5cm}|}
+\hline
+\textbf{Component} & \textbf{Purpose} \\
+\hline
+Profile & User profile and account settings \\
+\hline
+Cart & Shopping cart display and management \\
+\hline
+Orders & Order history and tracking \\
+\hline
+Favorites & Saved/favorited products \\
+\hline
+ShippingAddress & Manage shipping addresses \\
+\hline
+PaymentMethods & Payment method management \\
+\hline
+\end{longtable}
+
+\subsection{Business Components}
+
+\begin{longtable}{|p{3cm}|p{5cm}|}
+\hline
+\textbf{Component} & \textbf{Purpose} \\
+\hline
+InquiryForm & B2B inquiry submission form \\
+\hline
+MyInquiries & User's submitted inquiries \\
+\hline
+RegionSuppliers & Regional supplier information \\
+\hline
+Services & Service offerings and information \\
+\hline
+\end{longtable}
+
+\subsection{Admin Components}
+
+\begin{longtable}{|p{3cm}|p{5cm}|}
+\hline
+\textbf{Component} & \textbf{Purpose} \\
+\hline
+AdminPortal & Admin dashboard \\
+\hline
+\end{longtable}
+
+\subsection{Other Components}
+
+\begin{longtable}{|p{3cm}|p{5cm}|}
+\hline
+\textbf{Component} & \textbf{Purpose} \\
+\hline
+Newsletter & Email newsletter subscription \\
+\hline
+Messages & User messages and notifications \\
+\hline
+\end{longtable}
+
+\section{React Context and State Management}
+
+\subsection{AuthContext (src/context/AuthContext.jsx)}
+
+\textbf{Purpose}: Manages user authentication state globally
+
+\textbf{Provided Values}:
+\begin{itemize}
+    \item \texttt{user}: Current authenticated user object
+    \item \texttt{session}: User session with tokens
+    \item \texttt{profile}: Extended user profile information
+    \item \texttt{loading}: Authentication loading state
+    \item \texttt{signUp}: Function to register new user
+    \item \texttt{signIn}: Function to login user
+    \item \texttt{signOut}: Function to logout user
+    \item \texttt{refetchProfile}: Function to reload profile data
+\end{itemize}
+
+\begin{lstlisting}[language=javascript, caption=AuthContext Usage]
+// In component
+const { user, profile, signIn, signOut } = useAuth();
+
+// Login
+const { data, error } = await signIn(email, password);
+
+// Logout
+await signOut();
+
+// Check if admin
+if (profile?.isAdmin) {
+  // Show admin features
+}
+\end{lstlisting}
+
+\subsection{CartContext (src/context/CartContext.jsx)}
+
+\textbf{Purpose}: Manages shopping cart state
+
+\textbf{Provided Values}:
+\begin{itemize}
+    \item \texttt{items}: Array of cart items
+    \item \texttt{addItem}: Add product to cart
+    \item \texttt{removeItem}: Remove item from cart
+    \item \texttt{updateQuantity}: Update item quantity
+    \item \texttt{clearCart}: Empty the cart
+    \item \texttt{total}: Calculate total price
+\end{itemize}
+
+\section{Styling System}
+
+\subsection{Tailwind CSS Configuration}
+
+\textbf{Custom Colors}:
+\begin{lstlisting}[language=javascript, caption=Color Palette]
+primary: {
+  DEFAULT: '#0D6EFD',    // Main blue
+  light: '#E3F0FF',
+  dark: '#0056b3'
+}
+secondary: {
+  DEFAULT: '#8B96A5',    // Gray text
+  light: '#F7FAFC'       // Background
+}
+dark: {
+  DEFAULT: '#1C1C1C',    // Headings
+  light: '#505050'       // Subtle text
+}
+orange: { DEFAULT: '#FF9017' }
+teal: { 
+  DEFAULT: '#00B517',    // Success
+  light: '#E5F1E3'
+}
+aqua: {
+  DEFAULT: '#237C02',
+  light: '#C3FFCB'
+}
+\end{lstlisting}
+
+\textbf{Responsive Breakpoints}:
+\begin{itemize}
+    \item \texttt{sm}: 640px
+    \item \texttt{md}: 768px
+    \item \texttt{lg}: 1024px
+    \item \texttt{xl}: 1180px
+    \item \texttt{2xl}: 1180px
+\end{itemize}
+
+\section{Asset Organization}
+
+\begin{lstlisting}[language=bash, caption=Assets Structure]
+src/assets/
+├── Image/
+│   ├── backgrounds/     # Banner images
+│   ├── interior/        # Interior product images
+│   └── tech/           # Tech product images
+└── Layout/
+    ├── alibaba/        # Alibaba-themed layouts
+    │   └── Image/
+    │       ├── cloth/
+    │       ├── interior/
+    │       └── tech/
+    ├── Brand/          # Brand logos
+    ├── Form/           # Form-related assets
+    │   └── input-group/
+    │       └── Icon/
+    │           └── control/
+    ├── Misc/           # Miscellaneous assets
+    └── Layout1/
+        └── Image/
+            └── flags/  # Country flags
+\end{lstlisting}
+
+\section{API Integration}
+
+\subsection{Frontend API Client Pattern}
+
+\begin{lstlisting}[language=javascript, caption=API Client Usage]
+// Fetching products
+const response = await fetch('/api/products?category=electronics&limit=8');
+const data = await response.json();
+
+// With authentication
+const response = await fetch('/api/orders', {
+  headers: {
+    'Authorization': `Bearer ${accessToken}`
+  }
+});
+
+// POST with data
+const response = await fetch('/api/inquiries', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ subject, details, quantity })
+});
+\end{lstlisting}
+
+\subsection{Error Handling}
+
+Components implement error handling for API failures:
+\begin{itemize}
+    \item User-friendly error messages
+    \item Loading states during requests
+    \item Fallback data for failed requests
+    \item Retry mechanisms for critical data
+\end{itemize}
+
+\newpage
+
+% Chapter 6: System Architecture and Data Flow
+\chapter{System Architecture and Data Flow}
+
+\section{High-Level Architecture}
+
+\begin{center}
+\begin{tikzpicture}[
+  box/.style={rectangle, draw, minimum width=2.5cm, minimum height=0.8cm, text width=2.3cm, align=center},
+  arrow/.style={->, thick},
+  cloud/.style={rectangle, draw, dashed, minimum width=2cm, minimum height=0.8cm}
+]
+
+% Clients
+\node[box] (web) at (0, 6) {Web Browser};
+
+% Frontend
+\node[box, fill=lightblue] (react) at (0, 4.5) {React App\\(Vite)};
+
+% API
+\node[box, fill=lightblue] (api) at (0, 3) {Express API\\Server};
+
+% Database and Cache
+\node[box] (db) at (-2, 1.5) {PostgreSQL\\Database};
+\node[box] (redis) at (2, 1.5) {Redis Cache\\(Upstash)};
+
+% External Services
+\node[cloud] (supabase) at (-3.5, 3) {Supabase\\Auth};
+\node[cloud] (vercel) at (3.5, 3) {Vercel\\Deployment};
+
+% Arrows
+\draw[arrow] (web) -- (react);
+\draw[arrow] (react) -- (api);
+\draw[arrow] (api) -- (db);
+\draw[arrow] (api) -- (redis);
+\draw[arrow] (api) -- (supabase);
+\draw[arrow] (react) -- (supabase);
+
+\end{tikzpicture}
+\end{center}
+
+\section{Request Flow Diagram}
+
+\subsection{User Authentication Flow}
+
+\begin{enumerate}
+    \item User enters credentials in AuthModal
+    \item Frontend calls \texttt{POST /api/auth/login}
+    \item Backend validates credentials with Supabase
+    \item Backend returns access and refresh tokens
+    \item Frontend stores tokens and sets AuthContext
+    \item AuthContext fetches user profile from \texttt{GET /api/profiles/me}
+    \item User is authenticated and can access protected features
+\end{enumerate}
+
+\subsection{Product Browsing Flow}
+
+\begin{enumerate}
+    \item User navigates to ProductListing component
+    \item Frontend fetches products from \texttt{GET /api/products}
+    \item Backend checks Redis cache for products query
+    \item If cache miss: queries database with filters, stores in cache
+    \item Frontend receives products and renders ProductCardCarousel
+    \item User can filter by category, price, rating, brand
+    \item Frontend calls API with updated query parameters
+    \item Cache provides fast subsequent requests
+\end{enumerate}
+
+\subsection{Order Placement Flow}
+
+\begin{enumerate}
+    \item User adds items to Cart (CartContext manages items)
+    \item User clicks "Checkout" button
+    \item AuthModal appears if not logged in (user logs in)
+    \item Frontend calls \texttt{POST /api/orders} with cart items
+    \item Backend validates:
+        \begin{itemize}
+            \item User authentication
+            \item Product existence
+            \item Stock availability
+            \item Item quantities
+        \end{itemize}
+    \item Backend creates order record in database
+    \item Backend invalidates related cache entries
+    \item Frontend redirects to OrderConfirmation
+    \item User can view order in Orders component
+\end{enumerate}
+
+\subsection{Admin Operations Flow}
+
+\begin{enumerate}
+    \item Admin logs in with admin credentials
+    \item Backend verifies admin role (profile.isAdmin == true)
+    \item AuthContext detects admin and redirects to AdminPortal
+    \item Admin can:
+        \begin{itemize}
+            \item Create/Edit/Delete products
+            \item Manage categories
+            \item View orders and inquiries
+            \item Update order status
+        \end{itemize}
+    \item Admin actions call protected API endpoints
+    \item Backend requires admin role verification
+    \item Cache is invalidated on data changes
+\end{enumerate}
+
+\section{Data Flow Architecture}
+
+\subsection{Frontend to Backend Communication}
+
+\begin{lstlisting}[language=text, caption=API Communication Pattern]
+Frontend Request:
+  1. Component initiates data fetch
+  2. Construct API URL with parameters
+  3. Add Authorization header if authenticated
+  4. Send HTTP request (GET, POST, PUT, DELETE)
+
+Backend Processing:
+  1. Receive request at Express route handler
+  2. Apply middleware (auth, rate limit, cache)
+  3. Validate input parameters
+  4. Execute database operations
+  5. Cache response if applicable
+  6. Send JSON response
+
+Frontend Response Handling:
+  1. Parse response JSON
+  2. Update component state
+  3. Re-render UI with new data
+  4. Handle errors and display messages
+\end{lstlisting}
+
+\subsection{Caching Strategy}
+
+\begin{center}
+\begin{tikzpicture}[
+  box/.style={rectangle, draw, minimum width=2.5cm, minimum height=0.8cm},
+  arrow/.style={->, thick},
+  decision/.style={diamond, draw, aspect=1.5}
+]
+
+\node[box] (request) at (0, 5) {API Request};
+\node[decision] (cache) at (0, 3.5) {Cache Hit?};
+\node[box] (return_cache) at (-2, 3.5) {Return Cached};
+\node[box] (query_db) at (2, 3.5) {Query DB};
+\node[box] (store) at (2, 2) {Store in Cache};
+\node[box] (return_data) at (2, 0.5) {Return Data};
+
+\draw[arrow] (request) -- (cache);
+\draw[arrow] (cache) -- node[above left]{Yes} (return_cache);
+\draw[arrow] (cache) -- node[above right]{No} (query_db);
+\draw[arrow] (query_db) -- (store);
+\draw[arrow] (store) -- (return_data);
+\draw[arrow] (return_cache) -- (return_data);
+
+\end{tikzpicture}
+\end{center}
+
+\newpage
+
+% Chapter 7: Advanced Features and Implementation Details
+\chapter{Advanced Features}
+
+\section{Rate Limiting}
+
+\subsection{Implementation}
+
+Rate limiting prevents abuse by restricting the number of requests per time window.
+
+\textbf{Configuration}:
+\begin{itemize}
+    \item \textbf{Public endpoints}: 60 requests per 60 seconds
+    \item \textbf{Auth endpoints}: 5 requests per 60 seconds
+    \item \textbf{Storage}: Redis distributed store
+    \item \textbf{Key format}: \texttt{ratelimit:\{prefix\}:\{identifier\}}
+\end{itemize}
+
+\textbf{Usage}:
+\begin{lstlisting}[language=javascript, caption=Rate Limiting Middleware]
+router.post('/login', 
+  rateLimit({ 
+    keyPrefix: 'ratelimit:auth:login', 
+    windowSeconds: 60, 
+    max: 5 
+  }), 
+  async (req, res) => { ... }
+);
+\end{lstlisting}
+
+\section{Caching Strategy}
+
+\subsection{Cache Levels}
+
+\begin{itemize}
+    \item \textbf{Level 1}: Browser cache (HTTP cache headers)
+    \item \textbf{Level 2}: Redis cache (backend cache)
+    \item \textbf{Level 3}: Database queries (slowest)
+\end{itemize}
+
+\subsection{Cache Keys}
+
+Cache keys are generated based on:
+\begin{itemize}
+    \item Route/endpoint path
+    \item Request ID and parameters
+    \item Base64-encoded query parameters for uniqueness
+\end{itemize}
+
+\textbf{Example}: \texttt{cache:products:query:base64hash}
+
+\subsection{Cache Invalidation}
+
+\begin{itemize}
+    \item \textbf{TTL-based}: Automatic expiration after set time
+    \item \textbf{Event-based}: Manual invalidation on data changes
+    \item \textbf{Pattern-based}: Invalidate all related cache entries
+\end{itemize}
+
+\section{Security Features}
+
+\subsection{Authentication}
+
+\begin{itemize}
+    \item \textbf{Provider}: Supabase Auth (industry-standard)
+    \item \textbf{Token Type}: JWT with RS256 asymmetric signature
+    \item \textbf{Token Validation}: JWKS endpoint verification
+    \item \textbf{Fallback}: HS256 symmetric verification with secret
+\end{itemize}
+
+\subsection{Authorization}
+
+\begin{itemize}
+    \item \textbf{Role-based}: Admin vs. regular user
+    \item \textbf{Protected Routes}: Require authentication header
+    \item \textbf{Admin Routes}: Require isAdmin flag in profile
+    \item \textbf{User Data}: Isolated by user ID
+\end{itemize}
+
+\subsection{Security Headers}
+
+Implemented via Helmet middleware:
+\begin{itemize}
+    \item \texttt{Content-Security-Policy}: Prevent XSS attacks
+    \item \texttt{X-Frame-Options}: Prevent clickjacking
+    \item \texttt{X-Content-Type-Options}: Prevent MIME sniffing
+    \item \texttt{Strict-Transport-Security}: Force HTTPS
+    \item \texttt{Access-Control-Allow-Credentials}: Controlled access
+\end{itemize}
+
+\subsection{Input Validation}
+
+\begin{itemize}
+    \item Email format validation (regex)
+    \item Password minimum length (8 characters)
+    \item UUID format validation
+    \item Request size limits (10MB max)
+    \item String length constraints (250-2000 chars)
+\end{itemize}
+
+\subsection{CORS Configuration}
+
+\begin{lstlisting}[language=javascript, caption=CORS Setup]
+// Production origins
+- https://ecommerce-backend-design-79rt.vercel.app
+- https://{VERCEL_URL}
+
+// Local development origins
+- http://localhost:5173
+- http://localhost:3000
+- http://127.0.0.1:5173
+- http://127.0.0.1:3000
+
+// Custom origins from ALLOWED_ORIGINS env variable
+\end{lstlisting}
+
+\section{Error Handling}
+
+\subsection{Frontend Error Handling}
+
+\begin{itemize}
+    \item \textbf{Try-catch blocks}: Wrapped around API calls
+    \item \textbf{Error messages}: User-friendly displays
+    \item \textbf{Error states}: Component state for error display
+    \item \textbf{Fallback data}: Default values for missing data
+\end{itemize}
+
+\subsection{Backend Error Handling}
+
+\begin{itemize}
+    \item \textbf{HTTP Status Codes}:
+        \begin{itemize}
+            \item 400: Bad request (validation errors)
+            \item 401: Unauthorized (missing auth)
+            \item 403: Forbidden (insufficient permissions)
+            \item 404: Not found (resource doesn't exist)
+            \item 500: Server error (unexpected errors)
+        \end{itemize}
+    \item \textbf{Error Logging}: Console logging for debugging
+    \item \textbf{Error Messages}: JSON responses with error descriptions
+    \item \textbf{Graceful Degradation}: Continue operation when non-critical systems fail
+\end{itemize}
+
+\section{Performance Optimization}
+
+\subsection{Frontend Optimization}
+
+\begin{itemize}
+    \item \textbf{Code Splitting}: Vite automatically splits code
+    \item \textbf{Image Optimization}: Serve appropriately-sized images
+    \item \textbf{Lazy Loading}: Load components on demand
+    \item \textbf{Production Build}: Minified and optimized bundle
+\end{itemize}
+
+\subsection{Backend Optimization}
+
+\begin{itemize}
+    \item \textbf{Redis Caching}: Reduce database queries
+    \item \textbf{Query Optimization}: Use Prisma include/select efficiently
+    \item \textbf{Pagination}: Limit result set size
+    \item \textbf{Connection Pooling}: Database connection reuse
+\end{itemize}
+
+\subsection{Network Optimization}
+
+\begin{itemize}
+    \item \textbf{HTTP Caching}: Cache headers for static content
+    \item \textbf{Compression}: GZIP content compression
+    \item \textbf{CDN}: Vercel CDN for static assets
+    \item \textbf{Lazy Loading}: Load data on demand
+\end{itemize}
+
+\newpage
+
+% Chapter 8: Advanced Data Flows and Detailed Diagrams
+\chapter{Detailed Data Flows and Diagrams}
+
+\section{System Architecture Overview}
+
+\subsection{Complete System Architecture}
+
+The application is structured in multiple layers with clear separation of concerns:
+
+\begin{center}
+\begin{tikzpicture}[
+  scale=0.9,
+  box/.style={rectangle, draw, minimum width=2.5cm, minimum height=0.8cm, align=center},
+  thick_box/.style={rectangle, draw, line width=2pt, minimum width=2.5cm, minimum height=0.8cm},
+  arrow/.style={->, thick}
+]
+
+% Layer 1: User
+\node[box, fill=blue!20] (browser) at (0, 10) {Web Browser};
+
+% Layer 2: Frontend
+\node[box, fill=cyan!20] (frontend) at (0, 8) {React Frontend\\(Vite)};
+
+% Layer 3: API
+\node[box, fill=green!20] (api) at (0, 6) {Express API\\Middleware};
+
+% Layer 4: Database and Cache
+\node[box] (db) at (-3, 4) {PostgreSQL\\Database};
+\node[box] (redis) at (3, 4) {Redis Cache\\(Upstash)};
+
+% Layer 5: External
+\node[box, fill=yellow!20] (supabase) at (-3, 2) {Supabase\\Authentication};
+\node[box, fill=orange!20] (vercel) at (3, 2) {Vercel\\Deployment};
+
+% Connections
+\draw[arrow] (browser) -- (frontend);
+\draw[arrow] (frontend) -- node[right]{HTTP/CORS} (api);
+\draw[arrow] (api) -- node[above left]{Prisma ORM} (db);
+\draw[arrow] (api) -- node[above right]{Cache} (redis);
+\draw[arrow] (frontend) -- node[left]{JWT Auth} (supabase);
+\draw[arrow] (api) -- (supabase);
+
+\end{tikzpicture}
+\end{center}
+
+\section{Request Flow Diagrams}
+
+\subsection{Authentication Flow Sequence}
+
+\begin{lstlisting}[language=text, caption=User Authentication Flow]
+User Browser              Backend API              Supabase Auth
+    |                         |                         |
+    |-- POST /api/auth/login -|                         |
+    |    {email, password}    |                         |
+    |                         |-- Verify credentials --->|
+    |                         |<---- Token Response ---- |
+    |<-- {access_token, user}-|                         |
+    |                         |                         |
+    | Store tokens            |                         |
+    |-- GET /api/profiles/me -|                         |
+    |   Bearer: {token}       |                         |
+    |                         | Query profile from DB   |
+    |<-- Profile Data --------|                         |
+    |                         |                         |
+    | Authentication Complete |                         |
+\end{lstlisting}
+
+\subsection{Product Browsing Flow}
+
+\begin{lstlisting}[language=text, caption=Product Search and Filtering Flow]
+User                  Frontend            Backend API          Redis/DB
+  |                       |                    |                  |
+  | View products         |                    |                  |
+  |-- ProductListing ---->|                    |                  |
+  |                       | GET /api/products?category=electronics
+  |                       |------------------->|                  |
+  |                       |                    | Check Redis cache|
+  |                       |                    |<------Yes/No---->|
+  |                       |                    |                  |
+  |                       |    If MISS:        |                  |
+  |                       |    Query Database  |                  |
+  |                       |                    |-- SELECT ... --->|
+  |                       |                    |<-- Results ------| 
+  |                       |    Store in Cache  |                  |
+  |                       |                    | TTL: 3600s ----->|
+  |                       |<-- {products, ...} |                  |
+  |<-- Render Cards ------|                    |                  |
+  |                       |                    |                  |
+  | Adjust filter         |                    |                  |
+  | (e.g., minPrice=500)  |                    |                  |
+  |-- Update params ----->|                    |                  |
+  |                       | GET /api/products?minPrice=500...
+  |                       |------------------->|                  |
+  |                       |                    | Check cache      |
+  |                       |                    |-- Different key->|
+  |                       |                    | Cache MISS       |
+  |                       |                    |<-- Query DB ---->|
+  |                       |                    | Store in cache   |
+  |                       |<-- Filtered data --|                  |
+  |<-- Update UI          |                    |                  |
+\end{lstlisting}
+
+\subsection{Order Placement Flow}
+
+\begin{lstlisting}[language=text, caption=Complete Order Creation Process]
+User            Frontend         Backend API        Database
+  |                 |                 |                 |
+  | Add to cart     |                 |                 |
+  |----CartContext->|                 |                 |
+  |                 |                 |                 |
+  | Click checkout  |                 |                 |
+  |------CheckOut-->|                 |                 |
+  |                 | Verify auth?    |                 |
+  |                 | NO -> Auth modal |                 |
+  |                 | User logs in     |                 |
+  |                 |                  |                 |
+  |                 | POST /api/orders |                 |
+  |                 | {items: [..]}    |                 |
+  |                 | Authorization    |                 |
+  |                 |----------------->|                 |
+  |                 |                  | Validate stock  |
+  |                 |                  | SELECT product..|
+  |                 |                  |---------------->|
+  |                 |                  |<-- Product data |
+  |                 |                  |                 |
+  |                 |                  | BEGIN TRANSACTION
+  |                 |                  | INSERT order    |
+  |                 |                  |---------------->|
+  |                 |                  | INSERT items    |
+  |                 |                  |---------------->|
+  |                 |                  | UPDATE stock    |
+  |                 |                  |---------------->|
+  |                 |                  | COMMIT          |
+  |                 |                  |                 |
+  |                 |<-- Order created-|                 |
+  |<-- Confirmation-|                  |                 |
+  |                 | Invalidate cache |                 |
+  | View orders     |                  |                 |
+\end{lstlisting}
+
+\subsection{Admin Operations Flow}
+
+\begin{lstlisting}[language=text, caption=Admin Product Creation and Management]
+Admin User       Frontend         Backend API         Database
+   |                 |                 |                 |
+   | Login           |                 |                 |
+   |---- Login ----->|                 |                 |
+   |                 | POST /api/auth/login
+   |                 |----------------->|                 |
+   |                 |<-- JWT + User ---|                 |
+   |                 |                  |                 |
+   |                 | GET /api/profiles/me
+   |                 |----------------->|                 |
+   |                 |                  | SELECT profile  |
+   |                 |                  |---------------->|
+   |                 |<-- {isAdmin: true}                 |
+   |                 |                  |                 |
+   | Detect admin    |                  |                 |
+   |<-- Redirect to AdminPortal         |                 |
+   |                 |                  |                 |
+   | Create Product  |                  |                 |
+   |---- Form ----->|                   |                 |
+   |                 | POST /api/products
+   |                 | {title, price...}|                 |
+   |                 | Authorization    |                 |
+   |                 |----------------->|                 |
+   |                 |                  | Verify admin    |
+   |                 |                  | Validate input  |
+   |                 |                  | INSERT product  |
+   |                 |                  |---------------->|
+   |                 |                  |<-- New product  |
+   |                 |                  |                 |
+   |                 |                  | Invalidate cache:
+   |                 |                  | - cache:products
+   |                 |                  | - cache:categories
+   |                 |                  |                 |
+   |<-- Success -----|----- ACK --------|                 |
+   | Show toast      |                  |                 |
+\end{lstlisting}
+
+\section{Caching and Rate Limiting Flows}
+
+\subsection{Redis Caching Strategy}
+
+\begin{lstlisting}[language=text, caption=Cache Hit/Miss Decision Flow]
+API Request
+    |
+    V
+Is Redis configured?
+    |
+    +-- NO: Skip cache, query DB directly
+    |
+    +-- YES
+        |
+        V
+    Build cache key from:
+    - Endpoint path
+    - Query parameters (sorted)
+    - Base64 hash for uniqueness
+    |
+    V
+redis.GET(cache_key)
+    |
+    +-- HIT (data found)
+    |   |
+    |   V
+    |   Return cached response
+    |   Response time: 1-5ms
+    |   
+    +-- MISS (no data)
+        |
+        V
+    Query database with Prisma
+        |
+        V
+    Get response
+        |
+        V
+    Store in Redis:
+    redis.SET(key, data, {ex: TTL})
+    where TTL = 3600 (products) or 86400 (categories)
+        |
+        V
+    Return response to client
+    Response time: 50-200ms (first time)
+\end{lstlisting}
+
+\textbf{Cache Configuration by Endpoint}:
+
+\begin{itemize}
+    \item \textbf{Products}: 1 hour (3600s) - Frequently changes
+    \item \textbf{Categories}: 24 hours (86400s) - Rarely changes
+    \item \textbf{User Orders}: No cache - Personal data
+    \item \textbf{Profiles}: No cache - Personal data
+\end{itemize}
+
+\subsection{Rate Limiting Flow}
+
+\begin{lstlisting}[language=text, caption=Rate Limiting Logic with Redis]
+API Request arrives
+    |
+    V
+Extract client identifier:
+IP address or user ID
+    |
+    V
+Build Redis counter key:
+"ratelimit:{prefix}:{identifier}"
+    |
+    V
+redis.INCR(key)
+    |
+    +-- First call in window?
+    |   |
+    |   V
+    |   Set key expiration
+    |   Counter = 1
+    |   ALLOW request
+    |
+    +-- Counter <= max?
+    |   |
+    |   V
+    |   Increment counter
+    |   ALLOW request
+    |   Set Retry-After header
+    |
+    +-- Counter > max?
+        |
+        V
+        REJECT request
+        Return 429 Too Many Requests
+        Set Retry-After header
+
+Rate Limit Configuration:
+├─ Public endpoints: 60 requests per 60 seconds
+├─ Auth endpoints: 5 requests per 60 seconds
+├─ Inquiry endpoints: 10 requests per hour
+└─ Product queries: 60 requests per 60 seconds
+\end{lstlisting}
+
+\section{Middleware Execution Pipeline}
+
+\begin{lstlisting}[language=text, caption=Complete Middleware Chain]
+HTTP Request
+    |
+    V
+1. Express body parser
+   (Parse JSON, limit: 10MB)
+    |
+    V
+2. Diagnostic logger
+   (Log method + URL for debugging)
+    |
+    V
+3. Helmet security headers
+   (CSP, X-Frame-Options, etc)
+    |
+    V
+4. CORS middleware
+   (Check origin, handle preflight)
+    |
+    V
+5. Route-specific middleware:
+   |
+   +-- Public routes:
+   |   ├─ cacheMiddleware (check Redis)
+   |   ├─ rateLimit (Redis counter)
+   |   └─ optionalVerifyToken
+   |
+   +-- Protected routes:
+   |   ├─ verifyToken (required JWT)
+   |   ├─ noCacheHeaders
+   |   └─ optional: requireAdmin
+   |
+   +-- Admin routes:
+   |   ├─ verifyToken (required)
+   |   ├─ requireAdmin (role check)
+   |   └─ noCacheHeaders
+    |
+    V
+6. Route handler
+   (Controller logic, DB operations)
+    |
+    V
+7. Response middleware
+   (storeInCache if applicable)
+    |
+    V
+HTTP Response sent to client
+\end{lstlisting}
+
+\section{Frontend Component Hierarchy}
+
+\subsection{Complete React Component Tree}
+
+\begin{lstlisting}[language=text, caption=Full Component Structure]
+App.jsx
+├─ AuthContext.Provider
+│  └─ CartContext.Provider
+│     ├─ Header
+│     │  ├─ Search Bar
+│     │  ├─ Cart Icon
+│     │  └─ User Menu
+│     ├─ AuthModal (conditional)
+│     │  ├─ Login Form
+│     │  └─ Register Form
+│     ├─ Content Router
+│     │  ├─ Home Page
+│     │  │  ├─ Hero
+│     │  │  ├─ Deals
+│     │  │  ├─ CategorySection
+│     │  │  ├─ ProductCardCarousel
+│     │  │  ├─ RecommendedItems
+│     │  │  ├─ Services
+│     │  │  ├─ RegionSuppliers
+│     │  │  ├─ InquiryForm
+│     │  │  └─ Newsletter
+│     │  ├─ Product Listing
+│     │  │  ├─ Filters (Category, Price, Brand)
+│     │  │  ├─ ProductCard (multiple)
+│     │  │  └─ Pagination
+│     │  ├─ Product Details
+│     │  │  ├─ Images
+│     │  │  ├─ Price/Stock
+│     │  │  └─ Add to Cart Button
+│     │  ├─ Cart
+│     │  │  ├─ CartItem (multiple)
+│     │  │  └─ Checkout Button
+│     │  ├─ Profile
+│     │  │  └─ User Info Form
+│     │  ├─ Orders
+│     │  │  └─ OrderCard (multiple)
+│     │  ├─ Favorites
+│     │  │  └─ ProductCard (multiple)
+│     │  ├─ MyInquiries
+│     │  │  └─ InquiryCard (multiple)
+│     │  ├─ Shipping Address
+│     │  │  └─ Address Form
+│     │  ├─ Payment Methods
+│     │  │  └─ Payment Form
+│     │  ├─ Messages
+│     │  │  └─ MessageCard (multiple)
+│     │  └─ Admin Portal
+│     │     ├─ Dashboard Stats
+│     │     ├─ Product Management
+│     │     ├─ Category Management
+│     │     ├─ Order Management
+│     │     └─ Inquiry Management
+│     └─ Footer
+└─ Global State
+   ├─ AuthContext (user, session, profile)
+   └─ CartContext (items, total)
+\end{lstlisting}
+
+\section{Database Indexing Strategy}
+
+\subsection{Performance Optimization Indexes}
+
+\begin{lstlisting}[language=sql, caption=Database Index Configuration]
+-- Product Table Indexes
+CREATE INDEX idx_product_categoryId ON product(categoryId);
+CREATE INDEX idx_product_brand ON product(brand);
+CREATE INDEX idx_product_price ON product(price);
+CREATE INDEX idx_product_rating ON product(rating DESC);
+CREATE INDEX idx_product_createdAt ON product(createdAt DESC);
+
+-- Composite indexes for common filters
+CREATE INDEX idx_product_category_price 
+  ON product(categoryId, price);
+
+-- Order Table Indexes
+CREATE INDEX idx_order_userId ON order(userId);
+CREATE INDEX idx_order_createdAt ON order(createdAt DESC);
+CREATE INDEX idx_order_status ON order(status);
+
+-- OrderItem Table Indexes
+CREATE INDEX idx_orderitem_orderId ON orderItem(orderId);
+CREATE INDEX idx_orderitem_productId ON orderItem(productId);
+
+-- Category Table Indexes
+CREATE UNIQUE INDEX idx_category_slug ON category(slug);
+CREATE UNIQUE INDEX idx_category_name ON category(name);
+
+-- Profile Table Indexes
+CREATE UNIQUE INDEX idx_profile_email ON profile(email);
+\end{lstlisting}
+
+\section{Error Handling and Recovery}
+
+\subsection{Complete Error Flow Strategy}
+
+\begin{lstlisting}[language=text, caption=Error Handling Flow]
+Error Scenarios
+├─ Network Error
+│  └─ Show retry button, offline indicator
+├─ 400 Bad Request
+│  └─ Display validation errors
+├─ 401 Unauthorized
+│  └─ Redirect to AuthModal
+├─ 403 Forbidden
+│  └─ Display permission denied message
+├─ 404 Not Found
+│  └─ Show 404 page
+├─ 429 Rate Limited
+│  └─ Display retry-after message
+├─ 5xx Server Error
+│  └─ Auto-retry with exponential backoff
+└─ Timeout
+   └─ Show retry option
+
+Frontend Error Handling
+├─ Wrap API calls in try-catch
+├─ Check response.ok status
+├─ Parse error from response
+├─ Display user-friendly message
+├─ Log errors for debugging
+└─ Provide recovery action
+
+Backend Error Handling
+├─ Validate all inputs
+├─ Return appropriate HTTP status
+├─ Include error descriptions
+├─ Log errors with context
+└─ Gracefully degrade
+\end{lstlisting}
+
+\section{State Management Architecture}
+
+\subsection{Global State Structure}
+
+\begin{lstlisting}[language=javascript, caption=React Context State Management]
+// AuthContext
+{
+  user: { id, email, ... } | null,
+  session: { access_token, refresh_token } | null,
+  profile: { id, email, fullName, isAdmin, ... } | null,
+  loading: boolean,
+  signUp: (email, password, name) => Promise,
+  signIn: (email, password) => Promise,
+  signOut: () => Promise
+}
+
+// CartContext
+{
+  items: [{ id, productId, quantity, price }],
+  addItem: (product, qty) => void,
+  removeItem: (productId) => void,
+  updateQuantity: (productId, qty) => void,
+  clearCart: () => void,
+  total: number (computed),
+  itemCount: number (computed)
+}
+
+// Component State (useState)
+├─ currentPage: string (router state)
+├─ selectedProductId: string | null
+├─ showAuthModal: boolean
+├─ searchQuery: string
+├─ isLoading: boolean
+├─ error: string | null
+└─ formData: object
+\end{lstlisting}
+
+\newpage
+
+% Chapter 9: Deployment and Deployment Information
+\chapter{Deployment and Operations}
+
+\section{Deployment Architecture}
+
+\subsection{Frontend Deployment}
+
+\textbf{Platform}: Vercel
+\begin{itemize}
+    \item Automatic deployments from GitHub
+    \item Production environment for main branch
+    \item Preview environments for PRs
+    \item Built-in HTTPS and CDN
+    \item Global edge network
+\end{itemize}
+
+\textbf{Build Process}:
+\begin{enumerate}
+    \item Install dependencies: \texttt{npm install}
+    \item Build with Vite: \texttt{npm run build}
+    \item Output directory: \texttt{dist/}
+    \item Deploy to Vercel CDN
+\end{enumerate}
+
+\subsection{Backend Deployment}
+
+\textbf{Platform}: Vercel Serverless Functions
+\begin{itemize}
+    \item Serverless Express.js via serverless-http
+    \item Cold start optimizations
+    \item Auto-scaling
+    \item Environment variables management
+\end{itemize}
+
+\textbf{Entry Point}: Wrapped Express app in \texttt{api/index.js}
+
+\section{Environment Configuration}
+
+\subsection{Required Environment Variables}
+
+\begin{longtable}{|p{2.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Variable} & \textbf{Description} & \textbf{Example} \\
+\hline
+DATABASE\_URL & PostgreSQL connection string & postgresql://user:pass@host/db \\
+\hline
+SUPABASE\_URL & Supabase project URL & https://xxx.supabase.co \\
+\hline
+SUPABASE\_ANON\_KEY & Supabase public key & eyJ... \\
+\hline
+SUPABASE\_JWT\_SECRET & JWT signing secret & secret... \\
+\hline
+UPSTASH\_REDIS\_REST\_URL & Redis endpoint & https://xxx.upstash.io \\
+\hline
+UPSTASH\_REDIS\_REST\_TOKEN & Redis token & AXU... \\
+\hline
+VERCEL\_URL & Deployment URL & app.vercel.app \\
+\hline
+ALLOWED\_ORIGINS & Comma-separated origins & https://app.com,https://app2.com \\
+\hline
+NODE\_ENV & Environment & production / development \\
+\hline
+\end{longtable}
+
+\subsection{Environment Setup}
+
+\begin{lstlisting}[language=bash, caption=Environment Configuration]
+# Create .env file in root directory
+DATABASE_URL=postgresql://user:password@localhost:5432/ecommerce
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_anon_key_here
+SUPABASE_JWT_SECRET=your_jwt_secret
+UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_redis_token
+VERCEL_URL=ecommerce-app.vercel.app
+ALLOWED_ORIGINS=https://ecommerce-app.vercel.app
+
+# Optional: API-specific overrides in api/.env
+NODE_ENV=production
+\end{lstlisting}
+
+\section{Database Deployment}
+
+\subsection{PostgreSQL Setup}
+
+\begin{enumerate}
+    \item Create database on Supabase or managed PostgreSQL provider
+    \item Configure Prisma schema in \texttt{api/prisma/schema.prisma}
+    \item Run migrations: \texttt{npm run migrate}
+    \item Seed data (if needed): \texttt{npm run seed}
+    \item Verify connection with Prisma Studio: \texttt{npx prisma studio}
+\end{enumerate}
+
+\subsection{Database Migrations}
+
+\begin{lstlisting}[language=bash, caption=Migration Commands]
+# Create new migration
+npx prisma migrate dev --name migration_name
+
+# Run pending migrations
+npx prisma migrate deploy
+
+# Reset database (development only)
+npx prisma migrate reset
+
+# View schema changes
+npx prisma studio
+\end{lstlisting}
+
+\section{Redis/Caching Setup}
+
+\subsection{Upstash Redis Configuration}
+
+\begin{enumerate}
+    \item Sign up for Upstash account
+    \item Create new Redis database
+    \item Copy REST URL and token
+    \item Add to environment variables
+    \item Test connection with CLI
+\end{enumerate}
+
+\subsection{Redis Verification}
+
+\begin{lstlisting}[language=bash, caption=Redis Connection Test]
+# Test with curl
+curl --header "Authorization: Bearer YOUR_TOKEN" \
+  "https://YOUR_REDIS_URL/ping"
+
+# Expected response: PONG
+\end{lstlisting}
+
+\section{Deployment Checklist}
+
+\begin{enumerate}
+    \item \textbf{Frontend}:
+        \begin{itemize}
+            \item Build successful: \texttt{npm run build}
+            \item No console errors in production
+            \item API proxy configured in vite.config.js
+            \item Environment variables set in Vercel
+        \end{itemize}
+    
+    \item \textbf{Backend}:
+        \begin{itemize}
+            \item Dependencies installed: \texttt{npm install}
+            \item Database connection verified
+            \item Redis connection verified
+            \item Environment variables configured
+            \item Health check responding: \texttt{/api/health}
+        \end{itemize}
+    
+    \item \textbf{Security}:
+        \begin{itemize}
+            \item HTTPS enforced
+            \item CORS origins restricted
+            \item JWT secrets configured
+            \item Database credentials secured
+            \item Rate limiting enabled
+        \end{itemize}
+    
+    \item \textbf{Testing}:
+        \begin{itemize}
+            \item Manual testing in staging
+            \item API endpoints tested
+            \item Authentication tested
+            \item Database operations verified
+            \item Cache functionality verified
+        \end{itemize}
+\end{enumerate}
+
+\section{Monitoring and Maintenance}
+
+\subsection{Health Monitoring}
+
+\begin{itemize}
+    \item Monitor API health endpoint: \texttt{/api/health}
+    \item Check database connection status
+    \item Verify Redis availability
+    \item Monitor error rates and response times
+    \item Set up alerts for failures
+\end{itemize}
+
+\subsection{Log Management}
+
+\begin{itemize}
+    \item Backend logs: Vercel dashboard
+    \item Frontend errors: Browser console, monitoring service
+    \item Database logs: PostgreSQL logs
+    \item Redis operations: Upstash dashboard
+\end{itemize}
+
+\section{Scaling Considerations}
+
+\subsection{Database Scaling}
+
+\begin{itemize}
+    \item Use Supabase auto-scaling features
+    \item Optimize queries with indexes
+    \item Archive old data to separate storage
+    \item Monitor connection pool usage
+\end{itemize}
+
+\subsection{API Scaling}
+
+\begin{itemize}
+    \item Vercel auto-scaling handles load
+    \item Monitor request latency
+    \item Adjust rate limits as needed
+    \item Consider database read replicas
+\end{itemize}
+
+\subsection{Cache Optimization}
+
+\begin{itemize}
+    \item Monitor Redis memory usage
+    \item Adjust TTL values for optimal hit rates
+    \item Implement cache warming strategies
+    \item Consider Redis clustering for high traffic
+\end{itemize}
+
+\newpage
+
+% Chapter 9: Build and Development Scripts
+\chapter{Development and Build}
+
+\section{Frontend Scripts}
+
+\begin{longtable}{|p{2.5cm}|p{3cm}|p{4cm}|}
+\hline
+\textbf{Command} & \textbf{Purpose} & \textbf{Configuration} \\
+\hline
+\texttt{npm run dev} & Start dev server & Port 5173, HMR enabled \\
+\hline
+\texttt{npm run build} & Production build & Vite bundling, minification \\
+\hline
+\texttt{npm run preview} & Preview production build & Local preview at port 5173 \\
+\hline
+\end{longtable}
+
+\section{Backend Scripts}
+
+\begin{longtable}{|p{2.5cm}|p{3cm}|p{4cm}|}
+\hline
+\textbf{Command} & \textbf{Purpose} & \textbf{Notes} \\
+\hline
+\texttt{npm run dev} & Start dev server & Node.js server on port 3001 \\
+\hline
+\texttt{npm run generate} & Generate Prisma client & Auto-run on postinstall \\
+\hline
+\texttt{npm run migrate} & Run database migrations & Development migration \\
+\hline
+\texttt{npm run seed} & Seed database & Load initial data \\
+\hline
+\end{longtable}
+
+\section{Local Development Setup}
+
+\subsection{Prerequisites}
+
+\begin{itemize}
+    \item Node.js 18+
+    \item npm or yarn
+    \item PostgreSQL 15+ (or Supabase account)
+    \item Redis (or Upstash account)
+\end{itemize}
+
+\subsection{Installation Steps}
+
+\begin{lstlisting}[language=bash, caption=Setup Instructions]
+# Clone repository
+git clone [REPOSITORY_URL]
+cd ecommerce-frontend-design
+
+# Install frontend dependencies
+npm install
+
+# Install backend dependencies
+cd api
+npm install
+cd ..
+
+# Create environment file
+cp .env.example .env
+
+# Edit .env with your configuration
+nano .env
+
+# Run frontend in development
+npm run dev
+
+# In another terminal, run backend
+cd api
+npm run dev
+\end{lstlisting}
+
+\subsection{Running Both Frontend and Backend}
+
+\begin{lstlisting}[language=bash, caption=Development Workflow]
+# Terminal 1: Frontend
+npm run dev
+# Runs on http://localhost:5173
+
+# Terminal 2: Backend
+cd api
+npm run dev
+# Runs on http://localhost:3001
+
+# Frontend proxy config redirects /api to localhost:3001
+\end{lstlisting}
+
+\section{Testing Endpoints}
+
+\subsection{Using curl}
+
+\begin{lstlisting}[language=bash, caption=cURL API Testing Examples]
+# Health check
+curl http://localhost:3001/api/health
+
+# Get categories
+curl http://localhost:3001/api/categories
+
+# Get products
+curl http://localhost:3001/api/products?category=electronics&limit=5
+
+# Login
+curl -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}'
+
+# Create inquiry
+curl -X POST http://localhost:3001/api/inquiries \
+  -H "Content-Type: application/json" \
+  -d '{"subject":"Bulk Order","details":"Need 1000 units","quantity":1000,"unit":"pieces"}'
+\end{lstlisting}
+
+\section{Debugging}
+
+\subsection{Frontend Debugging}
+
+\begin{itemize}
+    \item Browser DevTools (F12)
+    \item React DevTools browser extension
+    \item Network tab for API monitoring
+    \item Console for JavaScript errors
+    \item Vite debug mode in package.json scripts
+\end{itemize}
+
+\subsection{Backend Debugging}
+
+\begin{itemize}
+    \item Console logs in route handlers
+    \item Node.js debugger: \texttt{node --inspect api/index.js}
+    \item Prisma Studio for database inspection
+    \item Network monitoring tools for requests
+    \item Error stack traces in logs
+\end{itemize}
+
+\newpage
+
+% Chapter 10: Future Enhancements and Best Practices
+\chapter{Future Enhancements and Best Practices}
+
+\section{Recommended Enhancements}
+
+\subsection{Data Persistence}
+
+\begin{itemize}
+    \item \textbf{Migrate Inquiries to Database}: Currently stored in JSON file
+        \begin{itemize}
+            \item Create Inquiry model in Prisma schema
+            \item Add database migrations
+            \item Update inquiry routes for DB queries
+        \end{itemize}
+    
+    \item \textbf{Favorites/Wishlist}: Currently only in browser storage
+        \begin{itemize}
+            \item Create Favorite model in Prisma
+            \item Add favorites API endpoints
+            \item Sync browser storage with backend
+        \end{itemize}
+\end{itemize}
+
+\subsection{Features to Implement}
+
+\begin{itemize}
+    \item \textbf{Payment Gateway Integration}: Stripe, PayPal, etc.
+    \item \textbf{Email Notifications}: Verification emails, order confirmations
+    \item \textbf{Advanced Search}: Full-text search in PostgreSQL
+    \item \textbf{Product Reviews}: User ratings and reviews
+    \item \textbf{Recommendation Engine}: ML-based recommendations
+    \item \textbf{Analytics Dashboard}: Admin analytics and reporting
+    \item \textbf{Wishlist Sharing}: Share wishlists with others
+    \item \textbf{Real-time Notifications}: WebSocket notifications
+\end{itemize}
+
+\subsection{Performance Improvements}
+
+\begin{itemize}
+    \item \textbf{Database Indexing}: Add strategic indexes
+    \item \textbf{Query Optimization}: Reduce N+1 queries
+    \item \textbf{Search Optimization}: Implement Elasticsearch
+    \item \textbf{Image Optimization}: Use image CDN, lazy loading
+    \item \textbf{API Response Compression}: GZIP compression
+\end{itemize}
+
+\section{Best Practices}
+
+\subsection{Code Quality}
+
+\begin{itemize}
+    \item \textbf{Linting}: Use ESLint for code quality
+    \item \textbf{Formatting}: Prettier for consistent formatting
+    \item \textbf{Type Safety}: Consider TypeScript migration
+    \item \textbf{Testing}: Implement unit and integration tests
+    \item \textbf{Code Review}: Mandatory peer review before merging
+\end{itemize}
+
+\subsection{Security Best Practices}
+
+\begin{itemize}
+    \item \textbf{Secrets Management}: Never commit .env files
+    \item \textbf{Dependency Updates}: Regular security patches
+    \item \textbf{Penetration Testing}: Regular security audits
+    \item \textbf{OWASP Compliance}: Follow OWASP Top 10
+    \item \textbf{Data Encryption}: Encrypt sensitive data at rest
+\end{itemize}
+
+\subsection{Database Best Practices}
+
+\begin{itemize}
+    \item \textbf{Backups}: Regular automated backups
+    \item \textbf{Monitoring}: Track query performance
+    \item \textbf{Migrations}: Test migrations before production
+    \item \textbf{Data Integrity}: Use constraints and validation
+    \item \textbf{Connection Pooling}: Optimize connection usage
+\end{itemize}
+
+\subsection{API Best Practices}
+
+\begin{itemize}
+    \item \textbf{Versioning}: Implement API versioning (/v1/, /v2/)
+    \item \textbf{Documentation}: Keep API docs up-to-date
+    \item \textbf{Error Handling}: Consistent error response format
+    \item \textbf{Pagination}: Always paginate large result sets
+    \item \textbf{Throttling}: Implement intelligent rate limiting
+\end{itemize}
+
+\section{Troubleshooting Guide}
+
+\subsection{Common Issues}
+
+\begin{longtable}{|p{3cm}|p{4cm}|p{2.5cm}|}
+\hline
+\textbf{Issue} & \textbf{Cause} & \textbf{Solution} \\
+\hline
+API not responding & Port already in use & Change port in config \\
+\hline
+Database connection error & Wrong connection string & Verify DATABASE\_URL \\
+\hline
+Redis timeout & Upstash endpoint unreachable & Check REDIS URL and token \\
+\hline
+CORS error & Origin not allowed & Add origin to ALLOWED\_ORIGINS \\
+\hline
+Auth failed & Invalid token & Re-login or refresh token \\
+\hline
+Slow queries & Missing indexes & Add database indexes \\
+\hline
+\end{longtable}
+
+\newpage
+
+% Chapter 11: Conclusion
+\chapter{Conclusion}
+
+\section{Summary}
+
+This comprehensive technical report documents a full-stack e-commerce platform with:
+
+\begin{itemize}
+    \item \textbf{Modern Frontend}: React with Vite for optimal development experience
+    \item \textbf{Robust Backend}: Express.js API with comprehensive feature set
+    \item \textbf{Reliable Database}: PostgreSQL with Prisma ORM for type safety
+    \item \textbf{High Performance}: Redis caching and rate limiting
+    \item \textbf{Strong Security}: JWT authentication, CORS, security headers
+    \item \textbf{Scalable Architecture}: Serverless deployment on Vercel
+    \item \textbf{Complete Feature Set}: Products, orders, inquiries, admin management
+\end{itemize}
+
+\section{Key Achievements}
+
+\begin{enumerate}
+    \item Successfully integrated Supabase authentication
+    \item Implemented efficient caching strategy with Redis
+    \item Designed scalable multi-tier architecture
+    \item Developed comprehensive API with 15+ endpoints
+    \item Created responsive UI with custom Tailwind configuration
+    \item Established security best practices throughout
+\end{enumerate}
+
+\section{Next Steps}
+
+\begin{enumerate}
+    \item Push code to GitHub repository: [INSERT REPOSITORY URL]
+    \item Deploy to Vercel production
+    \item Monitor application performance
+    \item Gather user feedback for improvements
+    \item Plan Phase 2 enhancements (payment, notifications, etc.)
+    \item Implement automated testing
+    \item Establish CI/CD pipeline
+\end{enumerate}
+
+\section{Repository Information}
+
+\begin{center}
+    \Large \textbf{GitHub Repository}
+    
+    \vspace{0.5cm}
+    \fbox{%
+        \parbox{12cm}{%
+            \textbf{URL:} \texttt{[ADD YOUR REPOSITORY URL HERE]} \\
+            \vspace{0.3cm}
+            \textbf{Setup Instructions:} \\
+            1. Clone the repository \\
+            2. Install dependencies (frontend and backend) \\
+            3. Configure environment variables \\
+            4. Run migrations \\
+            5. Start development servers \\
+            \vspace{0.3cm}
+            \textbf{Deployment:} Vercel (automated on push to main)
+        }%
+    }
+\end{center}
+
+\vspace{2cm}
+
+\begin{center}
+    \Large \textbf{Technical Documentation Complete}
+    
+    \vspace{0.5cm}
+    Generated: \today
+    
+    \vspace{0.5cm}
+    For questions or updates, refer to the repository README.md
+\end{center}
+
+\end{document}
